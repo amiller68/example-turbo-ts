@@ -1,0 +1,6 @@
+dist/
+node_modules/
+fonts/
+.env
+.env.*
+coverage/

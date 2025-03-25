@@ -29,9 +29,10 @@ const envSchema = z.object({
   LOG_TAIL_TOKEN: z.string().optional(),
 
   // TODO (service-setup): p much all services just use a shared secret for auth, so this is
-  //  a good example of how to do that.
+  //  a good example of how to do that. You should remove this default and set seomthing more
+  //  appropriate in your environment
   // You should probably replace `EXAMPLE_` with the name of your service.
-  EXAMPLE_AUTH_KEY: z.string(),
+  EXAMPLE_AUTH_KEY: z.string().default("not-so-secure")
 });
 
 // Parse env vars with better error handling
@@ -48,11 +49,10 @@ const parseEnv = () => {
       const truncated =
         missing.length > MAX_TO_SHOW ? missing.slice(0, MAX_TO_SHOW) : missing;
 
-      const message = `Missing environment variables: ${truncated.join(", ")}${
-        missing.length > MAX_TO_SHOW
-          ? `, and ${missing.length - MAX_TO_SHOW} more`
-          : ""
-      }.\nMake sure these are set in your .env file or environment.`;
+      const message = `Missing environment variables: ${truncated.join(", ")}${missing.length > MAX_TO_SHOW
+        ? `, and ${missing.length - MAX_TO_SHOW} more`
+        : ""
+        }.\nMake sure these are set in your .env file or environment.`;
 
       throw new Error(message);
     }

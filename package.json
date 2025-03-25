@@ -5,18 +5,17 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types",
-    "ex": "yarn -w apps/example",
-    "ex:docker:build": "docker build -t repo/example:latest -f docker/example/Dockerfile .",
-    "ex:docker:run": "docker run -p 3001:3001 repo/example:latest"
+    "test": "turbo run test",
+    "fmt": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "fmt:check": "prettier --check \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
     "prettier": "^3.5.3",
     "turbo": "^2.4.4"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
   "packageManager": "yarn@1.22.22",
   "workspaces": [

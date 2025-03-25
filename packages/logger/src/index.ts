@@ -14,8 +14,8 @@ export function createLogger({
   vercelEnv = undefined,
 }: {
   sourceToken?: string;
-  level?: string,
-  vercelEnv?: string,
+  level?: string;
+  vercelEnv?: string;
 }) {
   // Create logtail instance if sourceToken is provided
   const logtail = sourceToken ? new Logtail(sourceToken) : null;

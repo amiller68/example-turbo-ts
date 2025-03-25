@@ -1,6 +1,43 @@
 import { Response } from "express";
 import { ZodError } from "zod";
 
+import { logger } from "@/services/logger";
+
+/* Examples usage:
+
+const handler = (req: Request, res: Response) => {
+  try {
+    // this would through a 422 error if the input is invalid
+    //  since its not caught by anything else
+    const unsafeParse = z.parse(unsafeInput);
+
+    // this could throw anything we want if we follow this pattern.
+    //  its good for implementing custom errors and business logic errors.
+    try {
+      const unsafeParse = z.parse(unsafeInput);
+    } catch (error) {
+      // this would throw a 401 when the input is invalid
+      throw new ServerError({
+        error: ServerErrors.BadRequest,
+        cause: error,
+      });
+    }
+
+    let random = Math.random();
+    if (random < 0.5) {
+      // this would get caught as a 500, since its not handled by ServerError.from
+      //  and isn't thrown from the ServerError class. It should also trigger
+      //  the logger.error below.
+      throw new Error("random error");
+    }
+  } catch (error) {
+    // Everything gets caught here and sent to the client
+    const serverError = ServerError.from(error);
+    serverError.send(res);
+  }
+}
+*/
+
 export enum ServerErrorStatus {
   BadRequest = 400,
   Unauthenticated = 401,
@@ -9,6 +46,8 @@ export enum ServerErrorStatus {
   Conflict = 409,
   ValidationError = 422,
   InternalError = 500,
+  ServiceUnavailable = 503,
+  // TODO: add more as needed
 }
 
 export interface IServerError {
@@ -34,9 +73,17 @@ export const ServerErrors = {
     message: "not-found",
     status: ServerErrorStatus.NotFound,
   } as IServerError,
+  ValidationError: {
+    message: "validation-error",
+    status: ServerErrorStatus.ValidationError,
+  } as IServerError,
   InternalError: {
     message: "internal-server-error",
     status: ServerErrorStatus.InternalError,
+  } as IServerError,
+  ServiceUnavailable: {
+    message: "service-unavailable",
+    status: ServerErrorStatus.ServiceUnavailable,
   } as IServerError,
   // TODO: add more as needed
 } as const;
@@ -100,9 +147,12 @@ export class ServerError extends Error {
       return error;
     }
 
+    // TODO: implement more implementations of FROM here as needed.
+    //  For now we are pretty set on saying ZodErrors are bad requests
+    //  if they are otherwise unhandled.
     if (error instanceof ZodError) {
       return new ServerError({
-        error: ServerErrors.BadRequest,
+        error: ServerErrors.ValidationError,
         cause: error,
       });
     }
@@ -116,7 +166,10 @@ export class ServerError extends Error {
 
   send(res: Response) {
     if (this.type === ServerErrorStatus.InternalError) {
-      console.log("error");
+      logger.error("server::error::internal-server-error", {
+        message: this.message,
+        stack: this.stack,
+      });
     }
 
     // Send sanitized message to client

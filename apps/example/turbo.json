@@ -5,7 +5,7 @@
   "tasks": {
     "build": {
       "env": [
-        "PORT"
+        "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
       ],
       "outputs": [
         "dist/**"

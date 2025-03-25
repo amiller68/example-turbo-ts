@@ -1,13 +1,22 @@
 {
   "extends": "@repo/typescript-config/base.json",
-  "include": [
-    "src/**/*"
-  ],
+  "compilerOptions": {
+    "lib": [
+      "ES2015"
+    ],
+    "outDir": "./dist",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
   "exclude": [
-    "dist",
     "node_modules"
   ],
-  "compilerOptions": {
-    "outDir": "dist"
-  }
+  "include": [
+    "src"
+  ]
 }

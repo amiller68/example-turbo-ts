@@ -1,8 +1,8 @@
 import { Router } from "express";
-import * as hello from "./hello";
+import * as echo from "./echo";
 
 const _router = Router();
 
-_router.post("/render", hello.handler);
+_router.post("/echo", echo.handler);
 
 export const router = _router;

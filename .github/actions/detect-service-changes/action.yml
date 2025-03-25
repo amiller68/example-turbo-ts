@@ -1,0 +1,80 @@
+name: "Detect Service Changes"
+description: "Detects which services need to be built based on changes"
+
+inputs:
+  pr_mode:
+    description: "Whether to run in PR mode (comparing against base) or push mode (comparing against previous commit)"
+    required: true
+    default: "false"
+  services_input:
+    description: "Optional comma-separated list of services to force build"
+    required: false
+    default: ""
+
+outputs:
+  matrix:
+    description: "JSON matrix of services that need building"
+    value: ${{ steps.set-matrix.outputs.matrix }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install jq
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Detect changes and create build matrix
+      id: set-matrix
+      shell: bash
+      run: |
+        # List of dockerized services
+        # TODO (service-cicd): add your service name here to make it buildable
+        #  and automatically pushable to ECR on successful pushes to main/dev
+        DOCKERIZED_SERVICES=("image-renderer")
+
+        # Check for manual service input
+        if [[ -n "${{ inputs.services_input }}" ]]; then
+          SERVICES_TO_BUILD=($(echo "${{ inputs.services_input }}" | tr ',' ' '))
+          echo "Manually triggered build for: ${SERVICES_TO_BUILD[*]}"
+        else
+          SERVICES_TO_BUILD=()
+          
+          # Get changed files based on mode
+          if [[ "${{ inputs.pr_mode }}" == "true" ]]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+          
+          # Check each potential service
+          for SERVICE in "${DOCKERIZED_SERVICES[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^apps/$SERVICE/"; then
+              SERVICES_TO_BUILD+=("$SERVICE")
+              continue
+            fi
+            
+            if echo "$CHANGED_FILES" | grep -q "^packages/"; then
+              if [ -f "apps/$SERVICE/package.json" ]; then
+                PACKAGE_DEPS=$(grep -o '"@quotient/[^"]*"' "apps/$SERVICE/package.json" | sed 's/"@quotient\///g' | sed 's/"//g')
+                for DEP in $PACKAGE_DEPS; do
+                  if echo "$CHANGED_FILES" | grep -q "^packages/$DEP/"; then
+                    SERVICES_TO_BUILD+=("$SERVICE")
+                    break
+                  fi
+                done
+              fi
+            fi
+          done
+        fi
+
+        # Create matrix JSON
+        if [ ${#SERVICES_TO_BUILD[@]} -eq 0 ]; then
+          echo "No services need to be built"
+          MATRIX='{"service":[]}'
+        else
+          SERVICES_JSON=$(printf '%s\n' "${SERVICES_TO_BUILD[@]}" | jq -R . | jq -s .)
+          MATRIX=$(echo '{"service":' $SERVICES_JSON '}')
+        fi
+
+        echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+        echo "Services to build: $MATRIX"

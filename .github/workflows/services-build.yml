@@ -41,8 +41,8 @@ jobs:
       - name: Build Docker image
         id: build_image
         run: |
-          chmod +x bin/docker.sh
-          ./bin/docker.sh build ${{ matrix.service }}
+          chmod +x bin/docker
+          ./bin/docker build ${{ matrix.service }}
 
       - name: Verify build
         run: |

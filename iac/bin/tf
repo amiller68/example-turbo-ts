@@ -1,0 +1,191 @@
+#!/bin/bash
+#!/usr/bin/env bash
+
+set -e
+
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Source the environment mappings
+source "$SCRIPT_DIR/env-mappings.sh"
+
+# Create backups directory if it doesn't exist
+BACKUPS_DIR="$PROJECT_ROOT/backups/tf"
+mkdir -p "$BACKUPS_DIR"
+
+ENVIRONMENTS=("staging" "production", "geo")
+
+# Function to show usage
+usage() {
+  echo "Run a terraform command against one of our supported environments"
+  echo "Usage: $0 <stage> <command> [args]"
+  echo "   or: $0 ecr <command> [args]  # To manage shared ECR repositories"
+  echo "Supported environments: ${ENVIRONMENTS[@]}"
+  echo " NOTE: the stage is the environment you want to run the terraform command against"
+  echo "  these map onto the following infisical environment slugs:"
+  echo "   - staging -> staging"
+  echo "   - production -> prod"
+  echo "   - geo -> prod"
+  echo "Commands:"
+  echo "  terraform [args] - Run terraform commands with injected environment variables from infisical"
+  echo "    see env-mappings.sh for the appropriate mappings and how to map an infisical var to a terraform var"
+  echo "  ecr [command] - Manage shared ECR repositories (init, plan, apply, destroy)"
+  echo "  move-state <moves-file> - Move terraform state according to moves file. File format must be a"
+  echo "    newline separated list of source_resource_address,target_resource_address"
+  echo ""
+  echo "Examples:"
+  echo "  $0 staging terraform plan"
+  echo "  $0 ecr plan              # Plan ECR repositories"
+  echo "  $0 ecr apply             # Apply changes to ECR repositories"
+  echo "  $0 staging move-state state-moves.txt"
+  exit 1
+}
+
+# Function to run terraform commands through infisical
+run_terraform() {
+  local cmd="$*"
+  
+  # Build the export command for environment variables
+  local export_commands=""
+  for MAPPING in "${MAPPINGS[@]}"; do
+    INFISICAL_VAR="${MAPPING%%:*}"
+    TF_VAR="${MAPPING#*:}"
+    export_commands="$export_commands export $TF_VAR=\$$INFISICAL_VAR;"
+  done
+  
+  # Get the Infisical slug for the environment
+  local infisical_env=$(map_to_infisical_env "$STAGE")
+  
+  echo "Running terraform in $STAGE environment (Infisical: $infisical_env)..."
+  infisical run --env="$infisical_env" -- sh -c "$export_commands terraform $cmd"
+}
+
+# Function for shared ECR terraform commands
+run_shared_ecr_terraform() {
+  local cmd="$*"
+  
+  echo "Running ECR terraform command..."
+  
+  # Use production credentials for shared resources
+  local infisical_env="prod"
+  
+  # Build export commands for environment variables
+  local export_commands=""
+  for MAPPING in "${MAPPINGS[@]}"; do
+    INFISICAL_VAR="${MAPPING%%:*}"
+    TF_VAR="${MAPPING#*:}"
+    export_commands="$export_commands export $TF_VAR=\$$INFISICAL_VAR;"
+  done
+  
+  # Run terraform in the shared ECR directory with environment variables from Infisical
+  echo "Using Infisical environment: $infisical_env for ECR terraform"
+  infisical run --env="$infisical_env" -- sh -c "$export_commands terraform -chdir=\"$PROJECT_ROOT/envs/aws-ecr\" $cmd"
+}
+
+# Check if this is a direct ECR command
+if [ "$#" -ge 1 ] && [ "$1" = "ecr" ]; then
+  # This is a direct ECR command (no environment)
+  COMMAND=$1
+  shift # Remove command from arguments
+  
+  # Handle direct ECR command
+  run_shared_ecr_terraform "$@"
+  exit 0
+fi
+
+# Otherwise, this is an environment-specific command
+if [ "$#" -lt 2 ]; then
+  usage
+fi
+
+STAGE=$1
+COMMAND=$2
+shift 2 # Remove stage and command from arguments
+
+# Validate stage
+validate_env "$STAGE"
+ENV_DIR="$PROJECT_ROOT/envs/$STAGE"
+
+# Store current directory to return to later
+CURRENT_DIR=$(pwd)
+
+# Function to clean up and return to original directory
+cleanup() {
+  cd "$CURRENT_DIR"
+}
+trap cleanup EXIT
+
+# Navigate to environment directory
+echo "Navigating to $ENV_DIR"
+cd "$ENV_DIR"
+
+# Function to create a backup of the current state
+create_state_backup() {
+  local timestamp=$(date +"%Y%m%d_%H%M%S")
+  local backup_file="$BACKUPS_DIR/terraform_${STAGE}_${timestamp}.tfstate"
+  
+  echo "Creating state backup at: $backup_file"
+  terraform state pull > "$backup_file"
+  echo "Backup created successfully"
+}
+
+# Function to perform state moves
+perform_state_moves() {
+  local moves_file="$CURRENT_DIR/$1"
+  
+  if [ ! -f "$moves_file" ]; then
+    echo "Error: State moves file not found at $moves_file"
+    exit 1
+  fi
+  
+  # Create backup before performing moves
+  create_state_backup
+  
+  echo "Moving terraform state for resources using moves defined in $moves_file..."
+  
+  # Read the CSV file line by line
+  while IFS=, read -r source_addr target_addr || [ -n "$source_addr" ]; do
+    # Skip empty lines and lines starting with #
+    [[ -z "$source_addr" || "$source_addr" =~ ^[[:space:]]*# ]] && continue
+    
+    # Trim whitespace
+    source_addr="${source_addr## }"
+    source_addr="${source_addr%% }"
+    target_addr="${target_addr## }"
+    target_addr="${target_addr%% }"
+    
+    echo "Moving: $source_addr -> $target_addr"
+    terraform state mv "$source_addr" "$target_addr" || {
+      echo "Warning: Failed to move $source_addr to $target_addr"
+    }
+  done < "$moves_file"
+}
+
+# Handle commands
+case $COMMAND in
+  terraform)
+    if [ -z "$1" ]; then
+      echo "Error: Please provide a terraform command (init, plan, apply, destroy)"
+      echo "Usage: $0 $STAGE terraform <command> [args]"
+      exit 1
+    fi
+    run_terraform "$@"
+    ;;
+  ecr)
+    # ECR command doesn't need a separate subcommand - it redirects to terraform directly
+    run_shared_ecr_terraform "$@"
+    ;;
+  move-state)
+    if [ -z "$1" ]; then
+      echo "Error: Please provide the path to the state moves file"
+      echo "Usage: $0 $STAGE move-state <path-to-moves-file>"
+      exit 1
+    fi
+    perform_state_moves "$1"
+    ;;
+  *)
+    echo "Error: Unknown command '$COMMAND'"
+    usage
+    ;;
+esac 

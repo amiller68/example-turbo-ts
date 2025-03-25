@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: fmt-check
     runs-on: ubuntu-latest
 
     steps:

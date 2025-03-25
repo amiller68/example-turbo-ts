@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: lint-check
     runs-on: ubuntu-latest
 
     steps:

@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: check-types
     runs-on: ubuntu-latest
 
     steps:

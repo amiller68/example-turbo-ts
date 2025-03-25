@@ -28,5 +28,5 @@ jobs:
       - name: Install dependencies
         run: yarn
 
-      - name: Run Fmt Check
+      - name: Run Lint Checker
         run: yarn lint

@@ -27,10 +27,12 @@ jobs:
         run: |
           # Check for any Terraform changes
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^iac/"; then
+            echo "Terraform Changed"
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
+
 
   terraform-plan:
     needs: check-terraform

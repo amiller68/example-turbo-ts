@@ -7,6 +7,7 @@ on:
       - "apps/**"
       - "packages/**"
       - ".github/workflows/services-deploy.yml"
+      - "iac/**"
   workflow_dispatch:
     inputs:
       services:
@@ -21,7 +22,28 @@ on:
         type: boolean
 
 jobs:
+  check-terraform:
+    runs-on: ubuntu-latest
+    outputs:
+      has_tf_changes: ${{ steps.check.outputs.has_changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check for Terraform changes
+        id: check
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^iac/"; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
   detect-changes:
+    needs: check-terraform
+    if: needs.check-terraform.outputs.has_tf_changes != 'true'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -39,7 +61,11 @@ jobs:
           services_input: ${{ github.event.inputs.services }}
 
   build-and-push:
-    needs: detect-changes
+    needs: [check-terraform, detect-changes]
+    if: |
+      needs.check-terraform.outputs.has_tf_changes != 'true' && 
+      fromJSON(needs.detect-changes.outputs.matrix).service[0] != null && 
+      github.event.inputs.skip-build != 'true'
     if: ${{ fromJSON(needs.detect-changes.outputs.matrix).service[0] != null }} && ${{ github.event.inputs.skip-build != 'true' }}
     runs-on: ubuntu-latest
     strategy:

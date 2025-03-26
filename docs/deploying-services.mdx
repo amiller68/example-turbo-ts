@@ -13,6 +13,20 @@ You can follow the `TODO (service-deploy)` markers in the infrastructure code
 in order to easily deploy your service, but read these docs first to understand
 what you need to do.
 
+## Getting AWS Credentials
+
+Before starting any AWS operations, you need admin credentials:
+
+1. Go to AWS IAM Console
+2. Create or select an admin user
+3. Generate access keys under "Security credentials"
+4. Set the credentials in your environment:
+   ```bash
+   export AWS_ACCESS_KEY_ID="your-access-key"
+   export AWS_SECRET_ACCESS_KEY="your-secret-key"
+   export AWS_REGION="us-east-1"  # or your target region
+   ```
+
 ## Initial AWS Setup
 
 Before deploying any services, you need to set up the required AWS infrastructure for Terraform state management:

@@ -1,0 +1,415 @@
+---
+title: "Deploying Services"
+description: "Setting up infrastructure and deploying services to AWS"
+---
+
+# Deploying Services
+
+Deploying a new service involves setting up infrastructure in multiple places.
+
+Below are docs on what you need to do to get an mvp service up and running.
+
+You can follow the `TODO (service-deploy)` markers in the infrastructure code
+in order to easily deploy your service, but read these docs first to understand
+what you need to do.
+
+## Deploying ECR Repository
+
+Each service requires a new ECR repository in order to store its images.
+
+If you haven't already, you'll need to create a new ECR repository for your service.
+
+In order to do this, you'll need to add your service to the `iac/envs/aws-ecr/main.tf` file.
+
+```terraform
+locals {
+  # Add your service to the list by its canonical name
+  services = ["image-renderer", "your-service-name"]
+}
+```
+
+Then from the `./iac` directory, run the following commands:
+
+```bash
+# Initialize ECR terraform if needed
+./bin/tf ecr init
+
+# see the plan for what will be created
+./bin/tf ecr plan
+
+# apply the changes
+./bin/tf ecr apply -auto-approve
+```
+
+A new ECR repository will be created in your AWS account + region.
+
+Once this is done, CI/CD will be able to push images to the repository.
+If you'd like to push images manually during development, you can do so with the `docker.sh` script. See [docker-build-push.mdx](./docker-build-push.mdx) for more details.
+
+## Deploying ECS Infrastructure
+
+### Step 1: Set up Infisical Secrets + Wiring up Infisical Secrets to Terraform
+
+Before deploying your service, you need to set up environment variables in Infisical. These variables will be included in the service's task definition in AWS as container environment variables.
+
+#### Required Variables
+
+For each environment (staging/production), configure these variables in Infisical:
+
+1. **Authentication**
+
+   ```
+   YOUR_SERVICE_NAME_AUTH_KEY=<random-secure-string>
+   ```
+
+   - Generate a secure random string (at least 32 characters)
+   - Used to authenticate requests to your service
+   - Must match the key name in your service's configuration
+   - Use a different key for each environment
+
+2. **BetterStack Log Tailing** (Optional)
+   ```
+   YOUR_SERVICE_NAME_LOG_TAIL_TOKEN=<log-tail-token>
+   ```
+   - Required if you want to use the log tailing feature
+   - Get this token from your logging provider (e.g. BetterStack)
+   - By default, the example service does not require this.
+
+#### Referencing in Terraform
+
+In order to make infisical variables available to terraform when applying updates to infrastructure, you'll need to update our `./iac/bin/env-mappings.sh` script to export the variables for your service.
+
+For example, if you're adding a new service, you'll probably need to make sure
+the following is present:
+
+```bash
+# in ./iac/bin/env-mappings.sh
+MAPPINGS=(
+  ...
+  "YOUR_SERVICE_NAME_AUTH_KEY:TF_VAR_your_service_name_auth_key"
+  "YOUR_SERVICE_NAME_LOG_TAIL_TOKEN:TF_VAR_your_service_name_log_tail_token"
+)
+```
+
+Once made available to terraform, you can reference these variables in your environment configuration as variables in your environment workspace:
+
+```terraform
+# in iac/envs/{environment}/variables.tf
+variable "your_service_name_auth_key" {
+  description = "Authentication key for your-service-name"
+  type        = string
+  sensitive   = true
+}
+
+variable "your_service_name_log_tail_token" {
+  description = "Log tail token for your-service-name"
+  type        = string
+  sensitive   = true
+}
+```
+
+Finally, you can then reference those variables in your environment configuration when passing stage specific variables to the service module for a given stage:
+
+```terraform
+# in iac/envs/{environment}/main.tf
+service_configurations = {
+  "your-service-name" = {
+    container = {
+      environment = [
+        {
+          name  = "YOUR_SERVICE_NAME_AUTH_KEY"
+          value = var.your_service_name_auth_key  # References Infisical variable
+        },
+        # you'd only use this for production, but
+        {
+          name  = "YOUR_SERVICE_NAME_LOG_TAIL_TOKEN"
+          value = var.your_service_name_log_tail_token
+        }
+      ]
+    }
+  }
+}
+```
+
+## Step 2: Set Up Service Infrastructure
+
+The current example service is setup to be a good starting point for new services.
+
+1. Copy the example service module:
+
+```bash
+cp -r iac/modules/aws/services/example iac/modules/aws/services/your-service-name
+```
+
+2. Register your service in `iac/modules/aws/services/main.tf`:
+
+```terraform
+module "your_service" {
+  source           = "./your-service-name"
+  # TODO (service-deploy): add your service's specific variables here
+}
+
+locals {
+  service_modules = {
+    "image-renderer" = module.image_renderer.service,
+    # TODO (service-deploy): add your service's module here
+    "your-service-name" = module.your_service.service
+  }
+}
+```
+
+## Step 3: Wire up your service to write out it's url to infisical so that other services can find it:
+
+1. Add your service's url to the infisical module's variables:
+
+```terraform
+# in iac/modules/infisical/variables.tf
+variable "service_config" {
+  description = "Configuration for service secrets"
+  type = object({
+    # TODO (service-deploy): add your service's url here so that it can be passed to the infisical module
+    your_service_name_url = string
+  })
+}
+```
+
+2. Write out the url to infisical within a new secret resource:
+
+```bash
+# in iac/modules/infisical/services.tf
+resource "infisical_secret" "your_service_name_url" {
+    count = var.service_config.your_service_name_url != null ? 1 : 0
+
+    env_slug     = local.env_slug
+    folder_path  = "/"
+    name         = "YOUR_SERVICE_NAME_URL"
+    value        = var.service_config.your_service_name_url
+    workspace_id = var.infisical_project_id
+    tag_ids      = [infisical_secret_tag.terraform.id]
+  }
+```
+
+3. And wire up the output from the aws module to the infisical module:
+
+```terraform
+# in iac/envs/common/main.tf
+module "infisical" {
+  ...
+  service_config = var.aws_config != null ? {
+    # TODO (service-deploy): add your new service url here so that it can be referenced
+    #  by other services
+    your_service_name_url = module.aws[0].service_urls["your-service-name"]
+  } : null
+}
+```
+
+## Step 4: Deploy the Service
+
+Use the `tf` script to deploy your service from the `iac` directory:
+
+```bash
+# For staging environment
+./bin/tf staging terraform plan
+./bin/tf staging terraform apply
+
+# For production environment
+./bin/tf production terraform plan
+./bin/tf production terraform apply
+```
+
+At this point, your service should be deployed to AWS and accessible at
+`https://{staging|production}.aws.getquotient.com/your-service-name`.
+
+## CI/CD
+
+Our CI/CD pipeline automatically builds and deploys services using GitHub Actions. The workflow is defined in `.github/workflows/service-deploy.yml`.
+
+In order to enable CI/CD for your service, you'll need to:
+
+1. Add your service to the list of dockerized services our action for detecting changes to dockerized services:
+
+```yaml
+# In .github/actions/detect-service-changes/action.yml
+DOCKERIZED_SERVICES=("image-renderer" "your-service-name") # Add your service here
+```
+
+You can follow the `TODO (service-cicd)` markers in the file to easily add your service.
+
+See [cicd-setup.mdx](./cicd-setup.mdx) for more details on how our CI/CD pipeline works.
+
+## Service Configuration Options
+
+When implementing your service module, you have several configuration options available at different levels. Let's explore these using the `image-renderer` service as an example.
+
+### Global Defaults
+
+In `iac/modules/aws/services/_defaults/`, define default configurations that are shared across all services:
+
+```terraform
+# in iac/modules/aws/services/_defaults/main.tf
+# container defaults for all services
+output "container" {
+  description = "Default container configuration"
+  value = {
+    # all containers run on port 3000
+    port   = 3000
+    # have a default of 256 cpu and 512 memory
+    cpu    = 256
+    memory = 512
+    # and reflect our very strict tag + naming conventions
+    repository   = var.name
+    tag          = var.environment == "production" ? "latest" : "staging-latest"
+    # we have a standard health check endpoint for all services
+    health_check = "/${var.name}/_status/readyz"
+    # and a standard set of environment variables.
+    environment = [
+      {
+        name  = "ENV"
+        value = var.environment
+      },
+      {
+        name  = "BASE_PATH"
+        value = "/${var.name}"
+      }
+    ]
+  }
+}
+
+# service defaults for all services
+output "service" {
+  description = "Default service configuration"
+  value = {
+    # a standard description for all services
+    description           = "${var.name} service"
+    # a standard desired count for all services
+    desired_count         = 1
+    # a standard auto scaling configuration for all services
+    auto_scaling          = true
+    min_capacity          = 1
+    max_capacity          = 3
+    scaling_cpu_threshold = 70
+    # a standard listener rule for all services
+    #  it is very important that this aligns with the BASE_PATH in the container
+    #  environment variables!
+    lb_listener_rule = {
+      path_pattern = ["/${var.name}/*"]
+    }
+  }
+}
+```
+
+### Service Definition Defaults
+
+In your service module's `main.tf`, define default configurations that are specific to your service:
+
+```terraform
+locals {
+  service = {
+    # Container configuration. This must at least be an empty object if
+    #  you want to use all of the defaults from the global defaults.
+    # However, in the case of the image renderer:
+    container = {
+      cpu    = 512 # we upped this from 256 to 512 for the image renderer
+      memory = 1024 # we upped this from 512 to 1024 for the image renderer
+      environment = [
+        # We need to explicitly set the AWS region for the image renderer
+        #  in order to use the S3 bucket in the same region as the service
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        }
+        # And we passed in the bucket name for assets from the shared resources
+        {
+          name  = "AWS_S3_BUCKET"
+          value = var.shared_resources.assets.bucket
+        }
+      ]
+      # We cache fonts in an EFS volume for the image renderer. This defines where we mount it.
+      mount_points = [
+        {
+          sourceVolume  = "fonts-cache"
+          containerPath = "/app/fonts/dynamic"
+          readOnly      = false
+        }
+      ]
+    }
+
+    # And this defines the EFS volume itself.
+    volumes = [
+      {
+        name = "fonts-cache"
+        efs = {
+          creation_token   = "fonts-cache"
+          encrypted        = true
+          performance_mode = "generalPurpose"
+          throughput_mode  = "bursting"
+          owner_uid        = "1001"
+          owner_gid        = "1001"
+          permissions      = "777"
+          root_directory   = "/"
+        }
+      }
+    ]
+
+    # Basic services don't need any special permissions. However, if you need
+    #  to access other AWS resources, you can define a policy here. The Image
+    #  Renderer service needs access to the assets bucket to write out rendered
+    #  images to the assets bucket.
+    # If you don't need any special permissions, you can omit this.
+    policy = {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "s3:GetObject",
+            "s3:PutObject"
+          ]
+          Resource = [
+            var.shared_resources.assets.bucket_arn,
+            "${var.shared_resources.assets.bucket_arn}/*"
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+### Environment-Specific Overrides
+
+Finally, in your environment configuration, you can override the defaults for your service. This is most useful for passing in environment variables for your service.
+
+```terraform
+# in iac/envs/{environment}/main.tf
+service_configurations = {
+  "your-service-name" = {
+    # Override container settings
+    container = {
+      cpu    = 1024  # override the service level default cpu
+      memory = 2048  # override the service level default memory
+      # append any additional environment variables here
+      environment = [
+        {
+          name  = "YOUR_SERVICE_NAME_AUTH_KEY"
+          value = var.your_service_name_auth_key
+        }
+      ]
+    }
+  }
+}
+```
+
+### Configuration Hierarchy
+
+Configurations are applied in the following order (later ones override earlier ones):
+
+1. **Global Defaults** (`_defaults/`)
+2. **Service Defaults** (your service's `main.tf`)
+3. **Environment Overrides** (`envs/{environment}/main.tf`)
+
+## Next Steps
+
+Once your service is deployed, you can interact with it using the `./bin/ecs` script.
+
+See [ecs-commands.mdx](./ecs-commands.mdx) for more details.

@@ -59,16 +59,16 @@ locals {
       memory = coalesce(try(var.override.container.memory, null), local.service_with_defaults.container.memory)
 
       # Optional fields
-      environment  = concat(local.service_with_defaults.container.environment, coalesce(var.override.container.environment, []))
+      environment  = concat(local.service_with_defaults.container.environment, try(coalesce(try(var.override.container.environment, null), []), []))
       secrets      = local.service_with_defaults.container.secrets
       mount_points = local.service_with_defaults.container.mount_points
       health_check = local.service_with_defaults.container.health_check
     },
     # Auto scaling overrides - keep flat structure for ECS module
-    auto_scaling          = coalesce(try(var.override.auto_scaling.enabled, null), local.service_with_defaults.auto_scaling),
-    min_capacity          = coalesce(try(var.override.auto_scaling.min_capacity, null), local.service_with_defaults.min_capacity),
-    max_capacity          = coalesce(try(var.override.auto_scaling.max_capacity, null), local.service_with_defaults.max_capacity),
-    scaling_cpu_threshold = coalesce(try(var.override.auto_scaling.cpu_threshold, null), local.service_with_defaults.scaling_cpu_threshold)
+    auto_scaling          = try(coalesce(try(var.override.auto_scaling.enabled, null), local.service_with_defaults.auto_scaling), local.service_with_defaults.auto_scaling)
+    min_capacity          = try(coalesce(try(var.override.auto_scaling.min_capacity, null), local.service_with_defaults.min_capacity), local.service_with_defaults.min_capacity)
+    max_capacity          = try(coalesce(try(var.override.auto_scaling.max_capacity, null), local.service_with_defaults.max_capacity), local.service_with_defaults.max_capacity)
+    scaling_cpu_threshold = try(coalesce(try(var.override.auto_scaling.cpu_threshold, null), local.service_with_defaults.scaling_cpu_threshold), local.service_with_defaults.scaling_cpu_threshold)
 
     volumes = local.service_with_defaults.volumes
 

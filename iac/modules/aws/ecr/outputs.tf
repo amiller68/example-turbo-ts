@@ -10,4 +10,4 @@ output "repository_arns" {
   value = {
     for name, repo in aws_ecr_repository.repository : name => repo.arn
   }
-} 
+}

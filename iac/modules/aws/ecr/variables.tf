@@ -51,4 +51,4 @@ variable "tags" {
   description = "Tags to apply to all repositories"
   type        = map(string)
   default     = {}
-} 
+}

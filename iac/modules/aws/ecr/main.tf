@@ -45,4 +45,4 @@ resource "aws_ecr_lifecycle_policy" "lifecycle_policy" {
 
   repository = aws_ecr_repository.repository[each.key].name
   policy     = each.value
-} 
+}

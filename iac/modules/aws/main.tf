@@ -56,7 +56,7 @@ module "loadbalancer" {
 module "services" {
   source = "./services"
 
-  environment = var.environment
+  environment            = var.environment
   service_configurations = var.service_configurations
 }
 

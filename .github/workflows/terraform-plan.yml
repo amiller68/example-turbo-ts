@@ -58,6 +58,9 @@ jobs:
           cd ./ecr
           terraform init
 
+      # TODO: if you add a new ecr repo, then this step will fail.
+      # Obviously we should be able to t account for this, but for 
+      # the sake of a demo / example this is fine
       - name: Terraform Plan ECR
         id: plan-ecr
         run: |
@@ -88,31 +91,27 @@ jobs:
           script: |
             let output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`\n`;
             
-            if ('${{ needs.check-terraform.outputs.has_tf_changes }}' === 'true') {
-              output += `
-              ### ECR Changes
-              #### Terraform Plan 📖\`${{ steps.plan-ecr.outcome }}\`
-              <details><summary>Show ECR Plan</summary>
-              
-              \`\`\`\n
-              ${process.env.PLAN_ECR}
-              \`\`\`
-              
-              </details>\n`;
-            }
+            output += `
+            ### ECR Changes
+            #### Terraform Plan 📖\`${{ steps.plan-ecr.outcome }}\`
+            <details><summary>Show ECR Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN_ECR}
+            \`\`\`
+            
+            </details>\n`;
 
-            if ('${{ needs.check-terraform.outputs.has_tf_changes }}' === 'true') {
-              output += `
-              ### Environment Changes (${{ steps.env.outputs.env_path }})
-              #### Terraform Plan 📖\`${{ steps.plan-env.outcome }}\`
-              <details><summary>Show Environment Plan</summary>
-              
-              \`\`\`\n
-              ${process.env.PLAN_ENV}
-              \`\`\`
-              
-              </details>\n`;
-            }
+            output += `
+            ### Environment Changes (${{ steps.env.outputs.env_path }})
+            #### Terraform Plan 📖\`${{ steps.plan-env.outcome }}\`
+            <details><summary>Show Environment Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN_ENV}
+            \`\`\`
+            
+            </details>\n`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

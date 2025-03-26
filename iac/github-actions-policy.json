@@ -59,8 +59,8 @@
         "s3:PutObject"
       ],
       "Resource": [
-        "arn:aws:s3:::iac-experiment-tf-state",
-        "arn:aws:s3:::iac-experiment-tf-state/*"
+        "arn:aws:s3:::example-turbo-ts-tf-state",
+        "arn:aws:s3:::example-turbo-ts-tf-state/*"
       ]
     },
     {

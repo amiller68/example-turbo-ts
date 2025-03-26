@@ -18,7 +18,9 @@
         "ecr:PutImage",
         "ecr:ListTagsForResource",
         "ecr:CreateRepository",
-        "ecr:DeleteRepository"
+        "ecr:DeleteRepository",
+        "ecr:TagResource",
+        "ecr:UntagResource"
       ],
       "Resource": "arn:aws:ecr:*:*:repository/*"
     },

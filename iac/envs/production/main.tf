@@ -15,6 +15,7 @@ module "common" {
       "example" = {
         container = {
             cpu = 512
+            memory = 1024
         }
       }
     }

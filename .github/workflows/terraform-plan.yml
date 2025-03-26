@@ -34,7 +34,7 @@ jobs:
 
   terraform-plan:
     needs: check-terraform
-    if: needs.check-terraform.outputs.has_tf_changes == 'true'
+    if: needs.check-terraform.outputs.has_changes == 'true'
     name: Terraform Plan
     runs-on: ubuntu-latest
     defaults:

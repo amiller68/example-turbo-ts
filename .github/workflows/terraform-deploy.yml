@@ -1,24 +1,19 @@
-name: 🏗️ Terraform Plan & Apply
+name: 🏗️ Terraform Apply
 
 on:
   push:
     branches: [main, dev]
     paths:
       - "iac/**"
-      - ".github/workflows/terraform-deploy.yml"
-  pull_request:
-    paths:
-      - "iac/**"
-      - ".github/workflows/terraform-deploy.yml"
+      - ".github/workflows/terraform-*.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  terraform:
-    name: Terraform
+  terraform-apply:
+    name: Terraform Apply
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,74 +35,26 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: us-east-1
 
-      - name: Terraform Format
-        id: fmt
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-
       - name: Determine Environment
         id: env
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "env_path=./iac/envs/production" >> $GITHUB_OUTPUT
+            echo "env_path=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "env_path=staging" >> $GITHUB_OUTPUT
           else
-            echo "UNSUPPORTED ENV"
+            echo "Unsupported branch: ${{ github.ref }}"
             exit 1
           fi
 
-      - name: Terraform Init
-        id: init
+      - name: Terraform Init and Apply ECR
         run: |
-          cd ${{ steps.env.outputs.env_path }}
+          cd ./ecr
           terraform init
+          terraform apply -auto-approve
 
-      - name: Terraform Validate
-        id: validate
+      - name: Terraform Init and Apply Environment
         run: |
-          cd ${{ steps.env.outputs.env_path }}
-          terraform validate -no-color
-
-      - name: Terraform Plan
-        id: plan
-        run: |
-          cd ${{ steps.env.outputs.env_path }}
-          terraform plan -no-color
-        continue-on-error: true
-
-      - name: Update Pull Request
-        uses: actions/github-script@v6
-        if: github.event_name == 'pull_request'
-        env:
-          PLAN: "${{ steps.plan.outputs.stdout }}"
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-
-            <details><summary>Show Plan</summary>
-
-            \`\`\`\n
-            ${process.env.PLAN}
-            \`\`\`
-
-            </details>`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: |
-          cd ${{ steps.env.outputs.env_path }}
+          cd ./${{ steps.env.outputs.env_path }}
+          terraform init
           terraform apply -auto-approve

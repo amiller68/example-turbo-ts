@@ -1,11 +1,11 @@
-name: 🔨 Services Build
+name: 🐳 Docker Build
 
 on:
   pull_request:
     paths:
       - "apps/**"
       - "packages/**"
-      - ".github/workflows/services-build.yml"
+      - ".github/workflows/docker-build.yml"
 
 jobs:
   detect-changes:

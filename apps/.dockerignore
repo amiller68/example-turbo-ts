@@ -1,3 +1,0 @@
-src/__tests__
-
-# everything else should be ignored by the root .dockerignore

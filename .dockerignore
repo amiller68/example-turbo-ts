@@ -1,0 +1,56 @@
+# NOTE: (amiller68) global docker ignore.
+#  all docker builds run in the context
+#  of the repo root, so they should pick this 
+#  up + whatever files you ignore for the 
+#  specific build in its service's .dockerignore
+
+# Dependencies
+node_modules
+**/node_modules
+.pnp
+.pnp.js
+.turbo
+.pnpm-store
+.npm
+
+# Build outputs
+.next/
+out/
+build
+dist
+**/dist
+coverage
+
+# Version control
+.git
+.gitignore
+.github
+
+# Environment and secrets
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.infisical.json
+google-ads.yaml
+google-credentials.json
+
+# Debug logs
+npm-debug.log*
+*.log
+
+# IDE and system files
+.DS_Store
+*.pem
+.vscode
+.idea
+**/.DS_Store
+
+# Misc development files
+.vercel
+.shopify
+.husky
+.babelrc
+.aider*

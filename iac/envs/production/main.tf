@@ -12,19 +12,11 @@ module "common" {
 
     # Service configurations
     service_configurations = {
-      #  This is an example of setting a service's environment variable,
-      #  but you can override alot of defaults as well.
-      #  See ./iac/modules/aws/services/variables.tf
-      # "example" = {
-      #   container = {
-      #     environment = [
-      #       {
-      #         name  = "EXAMPLE_AUTH_KEY"
-      #         value = var.example_auth_key
-      #       }
-      #     ]
-      #   }
-      # }
+      "example" = {
+        container = {
+            cpu = 512
+        }
+      }
     }
   }
 }

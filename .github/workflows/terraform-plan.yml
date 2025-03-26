@@ -85,7 +85,7 @@ jobs:
 
       - name: Terraform Plan ECR
         id: plan-ecr
-        if: steps.check.outputs.has_ecr_changes == 'true'
+        if: needs.check-terraform.outputs.has_tf_changes == 'true'
         run: |
           cd ./iac/envs/ecr
           terraform plan -no-color
@@ -100,7 +100,7 @@ jobs:
 
       - name: Terraform Plan Environment
         id: plan-env
-        if: steps.check.outputs.has_changes == 'true'
+        if: needs.check-terraform.outputs.has_tf_changes == 'true'
         run: |
           cd ./iac/envs/production
           terraform plan -no-color
@@ -116,7 +116,7 @@ jobs:
           script: |
             let output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`\n`;
             
-            if ('${{ steps.check.outputs.has_ecr_changes }}' === 'true') {
+            if ('${{ needs.check-terraform.outputs.has_tf_changes }}' === 'true') {
               output += `
               ### ECR Changes
               #### Terraform Plan 📖\`${{ steps.plan-ecr.outcome }}\`
@@ -129,7 +129,7 @@ jobs:
               </details>\n`;
             }
 
-            if ('${{ steps.check.outputs.has_env_changes }}' === 'true') {
+            if ('${{ needs.check-terraform.outputs.has_tf_changes }}' === 'true') {
               output += `
               ### Environment Changes (${{ steps.env.outputs.env_path }})
               #### Terraform Plan 📖\`${{ steps.plan-env.outcome }}\`

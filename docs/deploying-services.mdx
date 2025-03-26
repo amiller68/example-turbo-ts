@@ -96,50 +96,12 @@ locals {
 }
 ```
 
-## Step 3: Wire up your service to write out it's url to infisical so that other services can find it:
+## Step 3: Service URLs
 
-1. Add your service's url to the infisical module's variables:
+Your service will be accessible at:
+`https://{environment}.aws.krondor.org/your-service-name`
 
-```terraform
-# in iac/modules/infisical/variables.tf
-variable "service_config" {
-  description = "Configuration for service secrets"
-  type = object({
-    # TODO (service-deploy): add your service's url here so that it can be passed to the infisical module
-    your_service_name_url = string
-  })
-}
-```
-
-2. Write out the url to infisical within a new secret resource:
-
-```bash
-# in iac/modules/infisical/services.tf
-resource "infisical_secret" "your_service_name_url" {
-    count = var.service_config.your_service_name_url != null ? 1 : 0
-
-    env_slug     = local.env_slug
-    folder_path  = "/"
-    name         = "YOUR_SERVICE_NAME_URL"
-    value        = var.service_config.your_service_name_url
-    workspace_id = var.infisical_project_id
-    tag_ids      = [infisical_secret_tag.terraform.id]
-  }
-```
-
-3. And wire up the output from the aws module to the infisical module:
-
-```terraform
-# in iac/envs/common/main.tf
-module "infisical" {
-  ...
-  service_config = var.aws_config != null ? {
-    # TODO (service-deploy): add your new service url here so that it can be referenced
-    #  by other services
-    your_service_name_url = module.aws[0].service_urls["your-service-name"]
-  } : null
-}
-```
+The URL will be available as an output from the AWS module and can be referenced by other services through the AWS Parameter Store.
 
 ## Step 4: Deploy the Service
 

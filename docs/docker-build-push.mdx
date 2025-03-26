@@ -34,12 +34,9 @@ While CI/CD typically handles image pushing, you can manually push images during
 # Push with AWS credentials in environment
 ./bin/docker.sh push your-service-name
 
-# Push using Infisical for credentials
-./bin/docker.sh push your-service-name -I
-
-# (Most likely) push to staging, with `staging-latest`, no branch protection,
+# Push to staging, with `staging-latest`, no branch protection,
 #  and allowing pushes against dirty branches
-./bin/docker.sh push your-service-name -I -D -L -S
+./bin/docker.sh push your-service-name -D -L -S
 ```
 
 ### Image Tagging Process
@@ -53,12 +50,13 @@ When pushing images, the script:
 2. Pushes to your service's ECR repository
 3. Manages environment-specific tags
 
-### Authentication Options
+### Authentication
 
-For pushing images, you'll need AWS credentials. These can be provided:
+For pushing images, you'll need AWS credentials provided as environment variables:
 
-- As environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`)
-- Via Infisical with the `-I` flag (recommended for development)
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
 
 ## Next Steps
 

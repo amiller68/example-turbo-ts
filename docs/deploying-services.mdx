@@ -13,6 +13,28 @@ You can follow the `TODO (service-deploy)` markers in the infrastructure code
 in order to easily deploy your service, but read these docs first to understand
 what you need to do.
 
+## Initial AWS Setup
+
+Before deploying any services, you need to set up the required AWS infrastructure for Terraform state management:
+
+1. Create an S3 bucket for Terraform state:
+   ```bash
+   aws s3 mb s3://example-turbo-ts-tf-state --region us-east-1
+   aws s3api put-bucket-versioning --bucket example-turbo-ts-tf-state --versioning-configuration Status=Enabled
+   ```
+
+2. Create a DynamoDB table for state locking:
+   ```bash
+   aws dynamodb create-table \
+     --table-name example-turbo-ts-tf-state-lock \
+     --attribute-definitions AttributeName=LockID,AttributeType=S \
+     --key-schema AttributeName=LockID,KeyType=HASH \
+     --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+     --region us-east-1
+   ```
+
+These resources are referenced in the Terraform backend configurations (e.g., `iac/envs/production/terraform.tf`).
+
 ## Deploying ECR Repository
 
 Each service requires a new ECR repository in order to store its images.

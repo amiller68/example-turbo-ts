@@ -48,88 +48,14 @@ If you'd like to push images manually during development, you can do so with the
 
 ## Deploying ECS Infrastructure
 
-### Step 1: Set up Infisical Secrets + Wiring up Infisical Secrets to Terraform
+### Prerequisites
 
-Before deploying your service, you need to set up environment variables in Infisical. These variables will be included in the service's task definition in AWS as container environment variables.
+Before deploying your service, ensure you have:
 
-#### Required Variables
+1. AWS credentials with admin privileges configured in your environment
+2. The service's ECR repository created (see ECR Repository section below)
 
-For each environment (staging/production), configure these variables in Infisical:
-
-1. **Authentication**
-
-   ```
-   YOUR_SERVICE_NAME_AUTH_KEY=<random-secure-string>
-   ```
-
-   - Generate a secure random string (at least 32 characters)
-   - Used to authenticate requests to your service
-   - Must match the key name in your service's configuration
-   - Use a different key for each environment
-
-2. **BetterStack Log Tailing** (Optional)
-   ```
-   YOUR_SERVICE_NAME_LOG_TAIL_TOKEN=<log-tail-token>
-   ```
-   - Required if you want to use the log tailing feature
-   - Get this token from your logging provider (e.g. BetterStack)
-   - By default, the example service does not require this.
-
-#### Referencing in Terraform
-
-In order to make infisical variables available to terraform when applying updates to infrastructure, you'll need to update our `./iac/bin/env-mappings.sh` script to export the variables for your service.
-
-For example, if you're adding a new service, you'll probably need to make sure
-the following is present:
-
-```bash
-# in ./iac/bin/env-mappings.sh
-MAPPINGS=(
-  ...
-  "YOUR_SERVICE_NAME_AUTH_KEY:TF_VAR_your_service_name_auth_key"
-  "YOUR_SERVICE_NAME_LOG_TAIL_TOKEN:TF_VAR_your_service_name_log_tail_token"
-)
-```
-
-Once made available to terraform, you can reference these variables in your environment configuration as variables in your environment workspace:
-
-```terraform
-# in iac/envs/{environment}/variables.tf
-variable "your_service_name_auth_key" {
-  description = "Authentication key for your-service-name"
-  type        = string
-  sensitive   = true
-}
-
-variable "your_service_name_log_tail_token" {
-  description = "Log tail token for your-service-name"
-  type        = string
-  sensitive   = true
-}
-```
-
-Finally, you can then reference those variables in your environment configuration when passing stage specific variables to the service module for a given stage:
-
-```terraform
-# in iac/envs/{environment}/main.tf
-service_configurations = {
-  "your-service-name" = {
-    container = {
-      environment = [
-        {
-          name  = "YOUR_SERVICE_NAME_AUTH_KEY"
-          value = var.your_service_name_auth_key  # References Infisical variable
-        },
-        # you'd only use this for production, but
-        {
-          name  = "YOUR_SERVICE_NAME_LOG_TAIL_TOKEN"
-          value = var.your_service_name_log_tail_token
-        }
-      ]
-    }
-  }
-}
-```
+No additional environment variables or secret management setup is required - the service will use AWS credentials for all necessary authentication and access.
 
 ## Step 2: Set Up Service Infrastructure
 

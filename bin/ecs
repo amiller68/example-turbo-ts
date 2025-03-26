@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Check if all required arguments are provided
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <command> <stage> <service-name> [task-id]"
+    echo "Commands:"
+    echo "  ssh     - SSH into a container"
+    echo "  deploy  - Force a new deployment of the service"
+    echo ""
+    echo "Examples:"
+    echo "  $0 ssh production example"
+    echo "  $0 deploy production example"
+    exit 1
+fi
+
+COMMAND=$1
+STAGE=$2
+SERVICE_NAME=$3
+TASK_ID=$4
+
+# Validate stage
+# TODO: implement more stages
+if [[ ! "$STAGE" =~ ^(production)$ ]]; then
+    echo "Error: Stage must be one of: production"
+    exit 1
+fi
+
+case "$COMMAND" in
+"ssh")
+    # If no task ID is provided, get a random one from the service
+    if [ -z "$TASK_ID" ]; then
+        echo "No task ID provided. Fetching a random task..."
+        TASK_ID=$(aws ecs list-tasks \
+            --cluster "${STAGE}-services" \
+            --service-name "${STAGE}-${SERVICE_NAME}" \
+            --output text \
+            --no-cli-pager \
+            --query 'taskArns[0]' | awk -F'/' '{print $3}')
+
+        if [ -z "$TASK_ID" ]; then
+            echo "Error: No running tasks found for service ${STAGE}-${SERVICE_NAME}"
+            exit 1
+        fi
+        echo "Selected task ID: $TASK_ID"
+    fi
+
+    echo "Establishing direct session with container..."
+
+    # Execute command in the container using ECS Execute Command
+    aws ecs execute-command \
+        --cluster "${STAGE}-services" \
+        --task "$TASK_ID" \
+        --container "$SERVICE_NAME" \
+        --command "/bin/sh" \
+        --no-cli-pager \
+        --interactive
+    ;;
+
+"deploy")
+    echo "Forcing new deployment for service ${STAGE}-${SERVICE_NAME}..."
+
+    # Force a new deployment of the service
+    aws ecs update-service \
+        --cluster "${STAGE}-services" \
+        --service "${STAGE}-${SERVICE_NAME}" \
+        --force-new-deployment \
+        --no-cli-pager
+
+    if [ $? -eq 0 ]; then
+        echo "Deployment initiated successfully"
+    else
+        echo "Error: Failed to initiate deployment"
+        exit 1
+    fi
+    ;;
+
+*)
+    echo "Error: Unknown command '$COMMAND'"
+    echo "Valid commands are: ssh, deploy"
+    exit 1
+    ;;
+esac
+

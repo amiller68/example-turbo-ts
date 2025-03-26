@@ -54,14 +54,12 @@ jobs:
 
       - name: Terraform Init ECR
         id: init-ecr
-        if: steps.check.outputs.has_changes == 'true'
         run: |
           cd ./ecr
           terraform init
 
       - name: Terraform Plan ECR
         id: plan-ecr
-        if: needs.check-terraform.outputs.has_tf_changes == 'true'
         run: |
           cd ./ecr
           terraform plan -no-color
@@ -69,14 +67,12 @@ jobs:
 
       - name: Terraform Init Environment
         id: init-env
-        if: steps.check.outputs.has_changes == 'true'
         run: |
           cd ./production
           terraform init
 
       - name: Terraform Plan Environment
         id: plan-env
-        if: needs.check-terraform.outputs.has_tf_changes == 'true'
         run: |
           cd ./production
           terraform plan -no-color

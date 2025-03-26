@@ -20,7 +20,8 @@
         "rds:*",
         "lambda:*",
         "sns:*",
-        "events:*"
+        "events:*",
+        "dynamodb:*"
       ],
       "Resource": "*"
     }

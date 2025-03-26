@@ -13,7 +13,6 @@ permissions:
 
 jobs:
   terraform-plan:
-    needs: check-terraform
     name: Terraform Plan
     runs-on: ubuntu-latest
     defaults:

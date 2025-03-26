@@ -19,8 +19,8 @@ SERVICE_NAME=$3
 TASK_ID=$4
 
 # Validate stage
-if [[ ! "$STAGE" =~ ^(production|staging)$ ]]; then
-    echo "Error: Stage must be one of: production, staging"
+if [[ ! "$STAGE" =~ ^(production)$ ]]; then
+    echo "Error: Stage must be one of: production"
     exit 1
 fi
 
@@ -80,7 +80,7 @@ case "$COMMAND" in
 
     if [ $? -eq 0 ]; then
         echo "Deployment initiated successfully"
-        
+
         # Wait for deployment to complete
         echo "Waiting for service to stabilize..."
         aws ecs wait services-stable \
@@ -105,4 +105,3 @@ case "$COMMAND" in
     exit 1
     ;;
 esac
-

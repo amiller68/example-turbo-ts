@@ -14,8 +14,8 @@ module "common" {
     service_configurations = {
       "example" = {
         container = {
-          cpu    = 512
-          memory = 1024
+          cpu    = 256
+          memory = 512
         }
       }
     }

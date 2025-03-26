@@ -140,7 +140,7 @@
            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
              STAGE="production"
            else
-             echo "Error: Deployment triggered from unsupported branch: ${{ github.ref }}
+             echo "Error: Deployment triggered from unsupported branch: ${{ github.ref }}"
              exit 1
            fi
 

@@ -20,7 +20,9 @@
         "ecr:CreateRepository",
         "ecr:DeleteRepository",
         "ecr:TagResource",
-        "ecr:UntagResource"
+        "ecr:UntagResource",
+        "ecr:PutLifecyclePolicy",
+        "ecr:DeleteLifecyclePolicy"
       ],
       "Resource": "arn:aws:ecr:*:*:repository/*"
     },

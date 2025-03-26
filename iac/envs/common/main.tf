@@ -14,6 +14,6 @@ module "aws" {
   tags = {
     Environment = var.environment
     ManagedBy   = "terraform"
-    Project     = locals.project_name
+    Project     = local.project_name
   }
 }

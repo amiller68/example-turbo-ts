@@ -18,21 +18,14 @@ const envSchema = z.object({
   //  staging environments, for all services.
   PORT: z.coerce.number().default(3000),
 
-  ENV: z.enum(["development", "production", "test"]).default("development"),
+  ENV: z
+    .enum(["development", "staging", "production", "test"])
+    .default("development"),
 
   // Logging configuration
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),
-  // NOTE: this is not required, but you can set up a log tail source and
-  //  use this token to send logs to a log tail source.
-  LOG_TAIL_TOKEN: z.string().optional(),
-
-  // TODO (service-setup): p much all services just use a shared secret for auth, so this is
-  //  a good example of how to do that. You should remove this default and set seomthing more
-  //  appropriate in your environment
-  // You should probably replace `EXAMPLE_` with the name of your service.
-  EXAMPLE_AUTH_KEY: z.string().default("not-so-secure"),
 });
 
 // Parse env vars with better error handling
@@ -76,10 +69,6 @@ export const config = {
   },
   log: {
     level: env.LOG_LEVEL,
-    logTailToken: env.LOG_TAIL_TOKEN,
-  },
-  secrets: {
-    authKey: env.EXAMPLE_AUTH_KEY,
   },
 } as const;
 

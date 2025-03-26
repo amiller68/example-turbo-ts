@@ -16,9 +16,9 @@
 #  - the name we use for it in the service_modules map below
 # -----------------------------------------------------
 
-TODO (service-deploy): include your new service as a module here
-module "example_service" {
-  source           = "./example"
+# TODO (service-deploy): include your new service as a module here
+module "example" {
+  source = "./example"
 }
 
 # -----------------------------------------------------
@@ -28,7 +28,7 @@ locals {
   # Map raw service outputs
   service_modules = {
     # TODO (service-deploy): include your new service as a module here
-    "example-service" = module.example_service.service
+    "example" = module.example.service
   }
 }
 

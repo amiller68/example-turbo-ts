@@ -1,3 +1,8 @@
+output "load_balancer_dns" {
+  description = "DNS name of the load balancer"
+  value       = module.loadbalancer.dns_name
+}
+
 output "service_urls" {
   description = "Map of service names to their public URLs"
   value = {

@@ -1,7 +1,2 @@
-# NOTE: we don't actually need any variables for this service
-#  since defaults should be fine for a simple example. If you wanted
-#  to make your service take in arguments, this is where you'd define those
-# variable "aws_region" {
-#   description = "AWS region"
-#   type        = string
-# }
+# TODO (service-deploy): the example service does not need any variables
+#  If you need to pass in variables, add them here.

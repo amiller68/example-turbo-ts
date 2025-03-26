@@ -1,9 +1,12 @@
 import { Request, Response } from "express";
 
+import { logger } from "@/services/logger";
+
 import { ServerError, ServerErrors } from "@/server/error";
 
 export const handler = async (req: Request, res: Response) => {
   try {
+    logger.info("server::health::readyz -- health check started");
     // TODO (service-setup): this essentially equivalent to livez, but if you have any
     //  critical dependencies that need to be ready before you can handle
     //  requests, you can implement checks here i.e. we do a connection test to

@@ -13,9 +13,8 @@ module "common" {
     # Service configurations
     service_configurations = {
       #  This is an example of setting a service's environment variable,
-      #  but you can override alot of defaults as well. See ./iac/modules/aws/services/variables.tf
-      #  for more details. For the example we'll just rely on the default auth key. 
-      #  This is also where you'd set your logtail token if you wanted to use one
+      #  but you can override alot of defaults as well.
+      #  See ./iac/modules/aws/services/variables.tf
       # "example" = {
       #   container = {
       #     environment = [

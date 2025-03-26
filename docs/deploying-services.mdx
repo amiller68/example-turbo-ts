@@ -5,7 +5,7 @@ description: "Setting up infrastructure and deploying services to AWS"
 
 # Deploying Services
 
-This guide covers the steps needed to deploy a service to AWS. Follow these steps in order:
+This guide covers the steps needed to deploy a service to a new AWS. Follow these steps in order:
 
 1. Set up AWS credentials
 2. Configure Route 53 domain
@@ -133,7 +133,7 @@ module "your_service" {
 
 locals {
   service_modules = {
-    "image-renderer" = module.image_renderer.service,
+    "example" = module.example.service,
     # TODO (service-deploy): add your service's module here
     "your-service-name" = module.your_service.service
   }
@@ -149,16 +149,13 @@ The URL will be available as an output from the AWS module and can be referenced
 
 ## Step 4: Deploy the Service
 
-Use the `tf` script to deploy your service from the `iac` directory:
+Use `terraform` to deploy your service from the `iac` directory:
 
 ```bash
 # For staging environment
-./bin/tf staging terraform plan
-./bin/tf staging terraform apply
-
-# For production environment
-./bin/tf production terraform plan
-./bin/tf production terraform apply
+cd iac/envs/production
+terraform plan
+terraform apply
 ```
 
 At this point, your service should be deployed to AWS and accessible at

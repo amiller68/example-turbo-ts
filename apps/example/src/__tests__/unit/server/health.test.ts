@@ -13,6 +13,7 @@ describe("Health Endpoints", () => {
   // let statusMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // const { res, jsonMock: jMock, statusMock: sMock } = createMockResponse();
     const { res, jsonMock: jMock } = createMockResponse();
     mockResponse = res;
     jsonMock = jMock;

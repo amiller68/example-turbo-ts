@@ -8,15 +8,21 @@ variable "aws_region" {
   default     = "us-east-1" # Default if not explicitly set
 }
 
+# TODO (service-deploy): add your new services to this list in order to ensure
+#  its ECR repository is created. This must match the service name in turborepo
+locals {
+  services = ["example"]
+}
+
 module "ecr" {
   source = "../../modules/aws/ecr"
 
-  repository_names = var.services
+  repository_names = local.services
 
   lifecycle_policies = {
-    for service in var.services :
+    for service in local.services :
     "${service}" => var.default_lifecycle_policy
   }
 
-  tags = var.tags
+  tags = {}
 }

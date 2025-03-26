@@ -1,5 +1,3 @@
-# Core configuration
-
 locals {
   # Project-wide constants
   project_name = "example-turbo"

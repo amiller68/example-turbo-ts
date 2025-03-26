@@ -266,7 +266,6 @@ resource "aws_lb_listener_rule" "service_rule" {
   }
 
   listener_arn = var.lb_listener_arn
-  priority     = each.value.lb_listener_rule.priority
 
   action {
     type             = "forward"

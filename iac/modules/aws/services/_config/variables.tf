@@ -88,14 +88,14 @@ variable "service" {
     # NOTE: each service should have a policy that is a list of statements.
     #  even if the statement list is empty.
     # policy = any
-    policy = object({
+    policy = optional(object({
       Version = string
       Statement = list(object({
         Effect   = string
         Action   = list(string)
         Resource = list(string)
       }))
-    })
+    }))
   })
 }
 

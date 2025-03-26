@@ -1,17 +1,6 @@
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
 variable "environment" {
   description = "Environment name"
   type        = string
-}
-
-variable "tags" {
-  description = "Common resource tags"
-  type        = map(string)
-  default     = {}
 }
 
 # Optional per-environment service configuration overrides

@@ -35,7 +35,6 @@ output "service" {
     max_capacity          = 3
     scaling_cpu_threshold = 70
     lb_listener_rule = {
-      priority     = 100
       path_pattern = ["/${var.name}/*"]
     }
   }

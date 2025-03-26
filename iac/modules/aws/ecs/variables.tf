@@ -89,7 +89,6 @@ variable "services" {
     scaling_cpu_threshold = optional(number, 70)
 
     lb_listener_rule = optional(object({
-      priority     = number
       path_pattern = list(string)
     }))
 

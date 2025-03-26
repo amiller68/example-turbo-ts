@@ -5,7 +5,7 @@ description: "Building and pushing service images using our Docker tooling"
 
 # Docker Build and Push
 
-We use a standardized Docker build process for all services, managed through our `bin/docker.sh` script.
+We use a standardized Docker build process for all services, managed through our `bin/docker` script.
 
 If you've followed the [developing-new-service.mdx](./developing-new-service.mdx) guide, you should have a service that can be built and pushed to ECR.
 
@@ -17,10 +17,10 @@ Again, you won't need to manually build images. Our CI/CD pipeline will handle t
 
 ```bash
 # Development build (uses host platform)
-./bin/docker.sh build your-service-name
+./bin/docker build your-service-name
 
 # Staging / Production build (required for AWS Fargate)
-./bin/docker.sh build your-service-name -p linux/amd64
+./bin/docker build your-service-name -p linux/amd64
 ```
 
 ## Pushing Images
@@ -38,6 +38,7 @@ While CI/CD typically handles image pushing, you can manually push images during
 #  and allowing pushes against dirty branches
 ./bin/docker.sh push your-service-name -D -L -S
 ```
+You will need proper permssions set in your environment prior to pushing images.
 
 ### Image Tagging Process
 

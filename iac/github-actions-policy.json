@@ -6,6 +6,8 @@
       "Action": [
         "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
+        "ecr:GetLifecyclePolicy",
+        "ecr:GetAuthorizationToken",
         "ecr:GetDownloadUrlForLayer",
         "ecr:GetRepositoryPolicy",
         "ecr:DescribeRepositories",

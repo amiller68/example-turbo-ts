@@ -52,10 +52,22 @@ If you'd like to push images manually during development, you can do so with the
 
 Before deploying your service, ensure you have:
 
-1. AWS credentials with admin privileges configured in your environment
+1. AWS credentials with admin privileges configured in your environment:
+   ```bash
+   export AWS_ACCESS_KEY_ID="your-access-key"
+   export AWS_SECRET_ACCESS_KEY="your-secret-key"
+   export AWS_REGION="us-east-1"  # or your target region
+   ```
+
 2. The service's ECR repository created (see ECR Repository section below)
 
-No additional environment variables or secret management setup is required - the service will use AWS credentials for all necessary authentication and access.
+These AWS credentials will be used for:
+- Deploying infrastructure with Terraform
+- Pushing Docker images to ECR
+- Running ECS tasks and services
+- Managing other AWS resources (S3, etc.)
+
+No additional environment variables or secret management setup is required - the service will use these AWS credentials for all necessary authentication and access.
 
 ## Step 2: Set Up Service Infrastructure
 

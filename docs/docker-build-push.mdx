@@ -32,11 +32,11 @@ While CI/CD typically handles image pushing, you can manually push images during
 
 ```bash
 # Push with AWS credentials in environment
-./bin/docker.sh push your-service-name
+./bin/docker push your-service-name
 
 # Push to staging, with `staging-latest`, no branch protection,
 #  and allowing pushes against dirty branches
-./bin/docker.sh push your-service-name -D -L -S
+./bin/docker push your-service-name -D -L -S
 ```
 You will need proper permssions set in your environment prior to pushing images.
 

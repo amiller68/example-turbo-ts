@@ -3,13 +3,35 @@ title: "CI/CD Setup for Services"
 description: "Automated build and deployment workflow for services using GitHub Actions"
 ---
 
+NOTE: part of this setup assumes you've set up the [prerequisites](./deploying-services.mdx#prerequisites) for deploying services.
+
 # CI/CD Setup for Services
 
-Our CI/CD pipeline automatically builds and deploys services using GitHub Actions on pushes to `main` and `dev` branches. The workflow is defined in `.github/workflows/services-deploy.yml`.
+Our CI/CD pipeline automatically:
 
-## Enabling CI/CD for Your Service
+- builds and deploys services using GitHub Actions on pushes to `main` and `dev` branches.
+- triggers a test build + terraform plan for PRs into `main` and `dev` branches.
 
-1. Add your service to the list of dockerized services in the workflow:
+Relevant workflow files:
+
+- `.github/workflows/deploy.yml` - Apply terraform + deploy services to ECS
+- `.github/workflows/docker-build.yml` - Builds docker images for services for PRs
+- `.github/workflows/terraform-plan.yml` - Triggers a terraform plan for PRs
+
+## Prerequisites
+
+### 1. GitHub Actions Secrets
+You'll need to add the following secrets to your GitHub repository:
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION` (Not required if you want to use `us-east-1`, our scripts will default to this)
+
+This should be the same as the AWS credentials you setup in the first step.
+
+### 2. Configuring the workflow to target your services
+
+In order for our CI/CD pipeline to build and deploy your services, you'll need to add your service to the list of dockerized services in the workflow.
 
 Just follow the `TODO (service-cicd)` markers in the file.
 
@@ -17,27 +39,6 @@ Just follow the `TODO (service-cicd)` markers in the file.
 # In .github/actions/detect-service-changes/action.yml
 DOCKERIZED_SERVICES=("example" "your-service-name") # Add your service here
 ```
-
-## Test Build Workflow Overview
-
-The test build workflow is defined in `.github/workflows/services-build.yml`. It is triggered for PRs into `main` and `dev` branches.
-
-The workflow will build docker images for all services that have changed within the PR.
-
-## Deployment Workflow Overview
-
-The pipeline consists of three main jobs:
-
-1. **Change Detection**: Determines which services need to be built
-2. **Build And Push**: Builds Docker images for the affected services and pushes them to ECR
-3. **Deploy**: Triggers a re-deploy of the service in ECS
-
-The workflow triggers on:
-
-1. **Push** to `main` or `dev` branches
-
-   - Builds and deploys affected services
-   - Changes must be in `apps/`, `packages/`, or the workflow file
 
 ## Related Documentation
 

@@ -7,9 +7,13 @@ if [ "$#" -lt 2 ]; then
     echo "  ssh     - SSH into a container"
     echo "  deploy  - Force a new deployment of the service"
     echo ""
+    echo "Deploy Options:"
+    echo "  --wait  - Wait for service to stabilize after deployment"
+    echo ""
     echo "Examples:"
     echo "  $0 ssh production example"
     echo "  $0 deploy production example"
+    echo "  $0 deploy production example --wait"
     exit 1
 fi
 
@@ -17,6 +21,19 @@ COMMAND=$1
 STAGE=$2
 SERVICE_NAME=$3
 TASK_ID=$4
+WAIT=false
+
+# Shift the first 3 arguments to check for flags
+shift 3
+
+# Check for --wait flag
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --wait) WAIT=true ;;
+        *) TASK_ID=$1 ;;
+    esac
+    shift
+done
 
 # Validate stage
 if [[ ! "$STAGE" =~ ^(production)$ ]]; then
@@ -80,18 +97,19 @@ case "$COMMAND" in
 
     if [ $? -eq 0 ]; then
         echo "Deployment initiated successfully"
+        
+        if [ "$WAIT" = true ]; then
+            echo "Waiting for service to stabilize..."
+            aws ecs wait services-stable \
+                --cluster "${STAGE}-services" \
+                --services "${STAGE}-${SERVICE_NAME}"
 
-        # Wait for deployment to complete
-        echo "Waiting for service to stabilize..."
-        aws ecs wait services-stable \
-            --cluster "${STAGE}-services" \
-            --services "${STAGE}-${SERVICE_NAME}"
-
-        if [ $? -eq 0 ]; then
-            echo "Service deployment completed successfully"
-        else
-            echo "Error: Service failed to stabilize"
-            exit 1
+            if [ $? -eq 0 ]; then
+                echo "Service deployment completed successfully"
+            else
+                echo "Error: Service failed to stabilize"
+                exit 1
+            fi
         fi
     else
         echo "Error: Failed to initiate deployment"

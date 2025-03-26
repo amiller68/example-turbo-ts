@@ -43,7 +43,9 @@ jobs:
 
   detect-changes:
     needs: check-terraform
-    if: needs.check-terraform.outputs.has_tf_changes != 'true'
+    if: |
+      needs.check-terraform.outputs.has_tf_changes != 'true' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -63,10 +65,9 @@ jobs:
   build-and-push:
     needs: [check-terraform, detect-changes]
     if: |
-      needs.check-terraform.outputs.has_tf_changes != 'true' && 
-      fromJSON(needs.detect-changes.outputs.matrix).service[0] != null && 
+      (needs.check-terraform.outputs.has_tf_changes != 'true' || github.event_name == 'workflow_dispatch') &&
+      fromJSON(needs.detect-changes.outputs.matrix).service[0] != null &&
       github.event.inputs.skip-build != 'true'
-    if: ${{ fromJSON(needs.detect-changes.outputs.matrix).service[0] != null }} && ${{ github.event.inputs.skip-build != 'true' }}
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}

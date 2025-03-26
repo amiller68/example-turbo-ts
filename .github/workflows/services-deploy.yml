@@ -1,6 +1,11 @@
 name: 🚀 Services Build, Push, & Deploy
 
 on:
+  workflow_run:
+    workflows: ["🏗️ Terraform Apply"]
+    types:
+      - completed
+    branches: [main, dev]
   push:
     branches: [main, dev]
     paths:
@@ -90,8 +95,6 @@ jobs:
           chmod +x bin/ecs
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             STAGE="production"
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            STAGE="staging"
           else
             echo "Error: Deployment triggered from unsupported branch: ${{ github.ref }}"
             exit 1

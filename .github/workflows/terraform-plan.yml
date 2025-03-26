@@ -45,8 +45,6 @@ jobs:
         run: |
           if [[ "${{ github.base_ref }}" == "main" ]]; then
             echo "env_path=production" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.base_ref }}" == "dev" ]]; then
-            echo "env_path=staging" >> $GITHUB_OUTPUT
           else
             echo "Unsupported target branch: ${{ github.base_ref }}"
             exit 1

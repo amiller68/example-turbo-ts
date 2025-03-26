@@ -11,7 +11,28 @@ permissions:
   pull-requests: write
 
 jobs:
+  check-terraform:
+    runs-on: ubuntu-latest
+    outputs:
+      has_tf_changes: ${{ steps.check.outputs.has_changes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check for Terraform changes
+        id: check
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^iac/"; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
   terraform-plan:
+    needs: check-terraform
+    if: needs.check-terraform.outputs.has_tf_changes == 'true'
     name: Terraform Plan
     runs-on: ubuntu-latest
     defaults:

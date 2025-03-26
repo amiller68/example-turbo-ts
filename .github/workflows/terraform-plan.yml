@@ -25,10 +25,24 @@ jobs:
       - name: Check for Terraform changes
         id: check
         run: |
+          # Check for any Terraform changes
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^iac/"; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check specific directories
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^iac/envs/ecr/"; then
+            echo "has_ecr_changes=true" >> $GITHUB_OUTPUT
+          else 
+            echo "has_ecr_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^iac/envs/production/\|^iac/envs/staging/\|^iac/modules/"; then
+            echo "has_env_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_env_changes=false" >> $GITHUB_OUTPUT
           fi
 
   terraform-plan:
@@ -75,12 +89,14 @@ jobs:
 
       - name: Terraform Init ECR
         id: init-ecr
+        if: steps.check.outputs.has_ecr_changes == 'true'
         run: |
           cd ./ecr
           terraform init
 
       - name: Terraform Plan ECR
         id: plan-ecr
+        if: steps.check.outputs.has_ecr_changes == 'true'
         run: |
           cd ./ecr
           terraform plan -no-color
@@ -88,12 +104,14 @@ jobs:
 
       - name: Terraform Init Environment
         id: init-env
+        if: steps.check.outputs.has_env_changes == 'true'
         run: |
           cd ./${{ steps.env.outputs.env_path }}
           terraform init
 
       - name: Terraform Plan Environment
         id: plan-env
+        if: steps.check.outputs.has_env_changes == 'true'
         run: |
           cd ./${{ steps.env.outputs.env_path }}
           terraform plan -no-color
@@ -107,27 +125,33 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            let output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`\n`;
             
-            ### ECR Changes
-            #### Terraform Plan 📖\`${{ steps.plan-ecr.outcome }}\`
-            <details><summary>Show ECR Plan</summary>
-            
-            \`\`\`\n
-            ${process.env.PLAN_ECR}
-            \`\`\`
-            
-            </details>
+            if ('${{ steps.check.outputs.has_ecr_changes }}' === 'true') {
+              output += `
+              ### ECR Changes
+              #### Terraform Plan 📖\`${{ steps.plan-ecr.outcome }}\`
+              <details><summary>Show ECR Plan</summary>
+              
+              \`\`\`\n
+              ${process.env.PLAN_ECR}
+              \`\`\`
+              
+              </details>\n`;
+            }
 
-            ### Environment Changes (${{ steps.env.outputs.env_path }})
-            #### Terraform Plan 📖\`${{ steps.plan-env.outcome }}\`
-            <details><summary>Show Environment Plan</summary>
-            
-            \`\`\`\n
-            ${process.env.PLAN_ENV}
-            \`\`\`
-            
-            </details>`;
+            if ('${{ steps.check.outputs.has_env_changes }}' === 'true') {
+              output += `
+              ### Environment Changes (${{ steps.env.outputs.env_path }})
+              #### Terraform Plan 📖\`${{ steps.plan-env.outcome }}\`
+              <details><summary>Show Environment Plan</summary>
+              
+              \`\`\`\n
+              ${process.env.PLAN_ENV}
+              \`\`\`
+              
+              </details>\n`;
+            }
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

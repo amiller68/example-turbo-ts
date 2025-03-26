@@ -25,7 +25,27 @@ Before starting any AWS operations, you need admin credentials:
    export AWS_ACCESS_KEY_ID="your-access-key"
    export AWS_SECRET_ACCESS_KEY="your-secret-key"
    export AWS_REGION="us-east-1"
-    ```
+   ```
+
+## Setting up Route 53 Hosted Zone
+
+Before deploying any infrastructure, you need to set up a Route 53 hosted zone:
+
+1. Go to Route 53 in AWS Console
+2. Create a hosted zone for your domain (e.g., `krondor.org`)
+3. Create a subdomain hosted zone for AWS services:
+   ```bash
+   aws route53 create-hosted-zone \
+     --name aws.krondor.org \
+     --caller-reference $(date +%s)
+   ```
+4. Note the NS records from the subdomain zone
+5. In the parent zone (`krondor.org`), create NS records for the subdomain:
+   - Name: `aws`
+   - Type: `NS`
+   - Values: (the four NS values from step 4)
+
+The infrastructure expects this hosted zone to exist at `aws.krondor.org` as referenced in `iac/modules/aws/main.tf`.
 
 ## Initial AWS Setup
 

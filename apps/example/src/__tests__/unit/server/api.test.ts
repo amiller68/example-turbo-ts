@@ -12,6 +12,7 @@ describe("API Endpoints", () => {
 
   beforeEach(() => {
     const { res, jsonMock: jMock } = createMockResponse();
+    // const { res, jsonMock: jMock, statusMock: sMock } = createMockResponse();
     mockResponse = res;
     jsonMock = jMock;
     // statusMock = sMock;

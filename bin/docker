@@ -17,7 +17,6 @@ Build Options:
 Deploy Options:
     -S            Skip branch name validation (allows non-main/dev branches)
     -D            Allow pushing from dirty working directory (not allowed for main/dev)
-    -I            Source environment variables from Infisical
     -L            Also tag unknown branches as staging-latest
     -F            Force push to latest tag (use with caution)
 
@@ -48,26 +47,6 @@ check_infisical() {
     fi
 }
 
-# Source environment variables from Infisical
-source_from_infisical() {
-    check_infisical
-
-    echo "Sourcing environment variables from Infisical..."
-
-    # Capture Infisical output directly into variables
-    eval "$(infisical export --env=prod | grep -E '(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|AWS_REGION)=')"
-
-    # Verify we got the required variables
-    if [[ -z "${AWS_ACCESS_KEY_ID}" ]] || [[ -z "${AWS_SECRET_ACCESS_KEY}" ]] || [[ -z "${AWS_REGION}" ]]; then
-        echo "Error: Required AWS credentials not found in Infisical"
-        echo "Please ensure the following secrets are set in Infisical:"
-        echo "  - AWS_ACCESS_KEY_ID"
-        echo "  - AWS_SECRET_ACCESS_KEY"
-        echo "  - AWS_REGION"
-        exit 1
-    fi
-}
-
 # Default values for push command
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 SKIP_BRANCH_CHECK=0
@@ -85,7 +64,7 @@ validate_platform() {
 
     # Check image platform
     PLATFORM=$(docker image inspect "quotient/$SERVICE_NAME:latest" --format '{{.Os}}/{{.Architecture}}')
-    
+
     # For deployment to AWS Fargate, we need to ensure the image is linux/amd64
     if [[ "$COMMAND" == "deploy" ]]; then
         if [[ "$PLATFORM" != "linux/amd64" ]]; then
@@ -100,7 +79,7 @@ validate_platform() {
         echo "Current platform: $PLATFORM"
         exit 1
     fi
-    
+
     echo "Image platform validated: $PLATFORM"
 }
 
@@ -262,7 +241,7 @@ case $COMMAND in
 build)
     # Default to host platform if not specified
     PLATFORM=""
-    
+
     # Parse build-specific options
     while getopts "p:" opt; do
         case $opt in
@@ -270,7 +249,7 @@ build)
         ?) usage ;;
         esac
     done
-    
+
     echo "Building docker container for $SERVICE_NAME..."
     if [ -n "$PLATFORM" ]; then
         echo "Using platform: $PLATFORM"
@@ -285,29 +264,22 @@ run)
     ;;
 push)
     # Parse push-specific options
-    while getopts "SDILF" opt; do
+    while getopts "SDLF" opt; do
         case $opt in
         S) SKIP_BRANCH_CHECK=1 ;;
         D) ALLOW_DIRTY=1 ;;
-        I) USE_INFISICAL=1 ;;
         L) TAG_AS_STAGING_LATEST=1 ;;
         F) FORCE_LATEST=1 ;;
         ?) usage ;;
         esac
     done
 
-    # Source from Infisical if requested
-    if [[ "$USE_INFISICAL" == 1 ]]; then
-        source_from_infisical
-    fi
-
     # Validate required environment variables
+    echo $AWS_ACCESS_KEY_ID
+    echo $AWS_SECRET_ACCESS_KEY
+    echo $AWS_REGION
     if [[ -z "$AWS_ACCESS_KEY_ID" ]] || [[ -z "$AWS_SECRET_ACCESS_KEY" ]] || [[ -z "$AWS_REGION" ]]; then
-        if [[ "$USE_INFISICAL" == 1 ]]; then
-            echo "Error: Required environment variables not found in Infisical"
-        else
-            echo "Error: Missing required environment variables"
-        fi
+        echo "Error: Missing required environment variables"
         usage
     fi
 

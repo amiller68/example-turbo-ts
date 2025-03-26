@@ -11,9 +11,6 @@ vi.mock("@/config", () => ({
     log: {
       logLevel: "info",
     },
-    secrets: {
-      authKey: "mock-auth-key",
-    },
   },
 }));
 

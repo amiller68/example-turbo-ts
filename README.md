@@ -37,3 +37,8 @@ To develop all apps and packages, run the following command:
 cd my-turborepo
 yarn dev
 ```
+
+# Notes
+
+- using aws bucket for state (example-turbo-ts-tf-state)
+- using aws dynamo for state (example-turbo-ts-tf-state-lock)

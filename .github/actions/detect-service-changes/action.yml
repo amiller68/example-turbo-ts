@@ -30,7 +30,7 @@ runs:
         # List of dockerized services
         # TODO (service-cicd): add your service name here to make it buildable
         #  and automatically pushable to ECR on successful pushes to main/dev
-        DOCKERIZED_SERVICES=("image-renderer")
+        DOCKERIZED_SERVICES=("example")
 
         # Check for manual service input
         if [[ -n "${{ inputs.services_input }}" ]]; then

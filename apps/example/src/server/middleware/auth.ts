@@ -1,19 +1,21 @@
 import { Request, Response, NextFunction } from "express";
-import { config } from "@/config";
-import { logger } from "@/services/logger";
+// import { config } from "@/config";
+//import { logger } from "@/services/logger";
 
 export function authMiddleware(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) {
-  const authKey = req.headers["x-api-key"];
+  // const authKey = req.headers["x-api-key"];
 
   // Skip auth for health checks
   if (req.path.startsWith("/health")) {
     return next();
   }
 
+  /* 
+   * TODO: implement auth if you want
   if (!authKey || authKey !== config.secrets.authKey) {
     logger.warn("middleware::auth::unauthorized-request", {
       path: req.path,
@@ -26,6 +28,7 @@ export function authMiddleware(
       message: "API key is required",
     });
   }
+  */
 
   next();
 }

@@ -1,0 +1,356 @@
+---
+title: "Deploying Services"
+description: "Setting up infrastructure and deploying services to AWS"
+---
+
+# Deploying Services
+
+This guide covers the steps needed to deploy a service to a new AWS. Follow these steps in order:
+
+1. Set up AWS credentials
+2. Configure Route 53 domain
+3. Create Terraform state storage
+4. Set up ECR repository
+5. Deploy service infrastructure
+
+Each step is detailed below.
+
+## 1. AWS Credentials
+
+You need AWS admin credentials to deploy services:
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"  # or your preferred region
+```
+
+Get these from your AWS IAM Console under Security Credentials.
+
+## 2. Route 53 Setup
+
+1. Create a hosted zone for your domain in Route 53
+2. Create a subdomain for AWS services:
+   ```bash
+   aws route53 create-hosted-zone --name aws.yourdomain.com --caller-reference $(date +%s)
+   ```
+3. Add NS records in your main domain pointing to the subdomain's nameservers
+4. Update `iac/modules/aws/main.tf` with your domain name
+
+## 3. Terraform State Storage
+
+Create required AWS resources for Terraform state:
+
+```bash
+# Create and configure S3 bucket
+aws s3 mb s3://example-turbo-ts-tf-state --region us-east-1
+aws s3api put-bucket-versioning \
+  --bucket example-turbo-ts-tf-state \
+  --versioning-configuration Status=Enabled
+
+# Create DynamoDB table for state locking
+aws dynamodb create-table \
+  --table-name example-turbo-ts-tf-state-lock \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+  --region us-east-1
+```
+
+## Deploying ECR Repository
+
+Each service requires a new ECR repository in order to store its images.
+
+If you haven't already, you'll need to create a new ECR repository for your service.
+
+In order to do this, you'll need to add your service to the `iac/envs/aws-ecr/main.tf` file.
+
+```terraform
+locals {
+  # Add your service to the list by its canonical name
+  services = ["example", "your-service-name"]
+}
+```
+
+Then from the `./iac` directory, run the following commands:
+
+```bash
+# Initialize ECR terraform if needed
+./bin/tf ecr init
+
+# see the plan for what will be created
+./bin/tf ecr plan
+
+# apply the changes
+./bin/tf ecr apply -auto-approve
+```
+
+A new ECR repository will be created in your AWS account + region.
+
+Once this is done, CI/CD will be able to push images to the repository.
+If you'd like to push images manually during development, you can do so with the `docker.sh` script. See [docker-build-push.mdx](./docker-build-push.mdx) for more details.
+
+## Deploying ECS Infrastructure
+
+### Prerequisites
+
+Before deploying your service, ensure you have:
+
+1. AWS credentials with admin privileges configured in your environment:
+   ```bash
+   export AWS_ACCESS_KEY_ID="your-access-key"
+   export AWS_SECRET_ACCESS_KEY="your-secret-key"
+   export AWS_REGION="us-east-1"  # or your target region
+   ```
+
+2. The service's ECR repository created (see ECR Repository section below)
+
+These AWS credentials will be used for:
+- Deploying infrastructure with Terraform
+- Pushing Docker images to ECR
+- Running ECS tasks and services
+- Managing other AWS resources (S3, etc.)
+
+No additional environment variables or secret management setup is required - the service will use these AWS credentials for all necessary authentication and access.
+
+## Step 2: Set Up Service Infrastructure
+
+The current example service is setup to be a good starting point for new services.
+
+1. Copy the example service module:
+
+```bash
+cp -r iac/modules/aws/services/example iac/modules/aws/services/your-service-name
+```
+
+2. Register your service in `iac/modules/aws/services/main.tf`:
+
+```terraform
+module "your_service" {
+  source           = "./your-service-name"
+  # TODO (service-deploy): add your service's specific variables here
+}
+
+locals {
+  service_modules = {
+    "example" = module.example.service,
+    # TODO (service-deploy): add your service's module here
+    "your-service-name" = module.your_service.service
+  }
+}
+```
+
+## Step 3: Service URLs
+
+Your service will be accessible at:
+`https://{environment}.aws.krondor.org/your-service-name`
+
+The URL will be available as an output from the AWS module and can be referenced by other services through the AWS Parameter Store.
+
+## Step 4: Deploy the Service
+
+Use `terraform` to deploy your service from the `iac` directory:
+
+```bash
+# For staging environment
+cd iac/envs/production
+terraform plan
+terraform apply
+```
+
+At this point, your service should be deployed to AWS and accessible at
+`https://{staging|production}.aws.getquotient.com/your-service-name`.
+
+## CI/CD
+
+Our CI/CD pipeline automatically builds and deploys services using GitHub Actions. The workflow is defined in `.github/workflows/service-deploy.yml`.
+
+In order to enable CI/CD for your service, you'll need to:
+
+1. Add your service to the list of dockerized services our action for detecting changes to dockerized services:
+
+```yaml
+# In .github/actions/detect-service-changes/action.yml
+DOCKERIZED_SERVICES=("image-renderer" "your-service-name") # Add your service here
+```
+
+You can follow the `TODO (service-cicd)` markers in the file to easily add your service.
+
+See [cicd-setup.mdx](./cicd-setup.mdx) for more details on how our CI/CD pipeline works.
+
+## Service Configuration Options
+
+When implementing your service module, you have several configuration options available at different levels. Let's explore these using the `image-renderer` service as an example.
+
+### Global Defaults
+
+In `iac/modules/aws/services/_defaults/`, define default configurations that are shared across all services:
+
+```terraform
+# in iac/modules/aws/services/_defaults/main.tf
+# container defaults for all services
+output "container" {
+  description = "Default container configuration"
+  value = {
+    # all containers run on port 3000
+    port   = 3000
+    # have a default of 256 cpu and 512 memory
+    cpu    = 256
+    memory = 512
+    # and reflect our very strict tag + naming conventions
+    repository   = var.name
+    tag          = var.environment == "production" ? "latest" : "staging-latest"
+    # we have a standard health check endpoint for all services
+    health_check = "/${var.name}/_status/readyz"
+    # and a standard set of environment variables.
+    environment = [
+      {
+        name  = "ENV"
+        value = var.environment
+      },
+      {
+        name  = "BASE_PATH"
+        value = "/${var.name}"
+      }
+    ]
+  }
+}
+
+# service defaults for all services
+output "service" {
+  description = "Default service configuration"
+  value = {
+    # a standard description for all services
+    description           = "${var.name} service"
+    # a standard desired count for all services
+    desired_count         = 1
+    # a standard auto scaling configuration for all services
+    auto_scaling          = true
+    min_capacity          = 1
+    max_capacity          = 3
+    scaling_cpu_threshold = 70
+    # a standard listener rule for all services
+    #  it is very important that this aligns with the BASE_PATH in the container
+    #  environment variables!
+    lb_listener_rule = {
+      path_pattern = ["/${var.name}/*"]
+    }
+  }
+}
+```
+
+### Service Definition Defaults
+
+In your service module's `main.tf`, define default configurations that are specific to your service:
+
+```terraform
+locals {
+  service = {
+    # Container configuration. This must at least be an empty object if
+    #  you want to use all of the defaults from the global defaults.
+    # However, in the case of the image renderer:
+    container = {
+      cpu    = 512 # we upped this from 256 to 512 for the image renderer
+      memory = 1024 # we upped this from 512 to 1024 for the image renderer
+      environment = [
+        # We need to explicitly set the AWS region for the image renderer
+        #  in order to use the S3 bucket in the same region as the service
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        }
+        # And we passed in the bucket name for assets from the shared resources
+        {
+          name  = "AWS_S3_BUCKET"
+          value = var.shared_resources.assets.bucket
+        }
+      ]
+      # We cache fonts in an EFS volume for the image renderer. This defines where we mount it.
+      mount_points = [
+        {
+          sourceVolume  = "fonts-cache"
+          containerPath = "/app/fonts/dynamic"
+          readOnly      = false
+        }
+      ]
+    }
+
+    # And this defines the EFS volume itself.
+    volumes = [
+      {
+        name = "fonts-cache"
+        efs = {
+          creation_token   = "fonts-cache"
+          encrypted        = true
+          performance_mode = "generalPurpose"
+          throughput_mode  = "bursting"
+          owner_uid        = "1001"
+          owner_gid        = "1001"
+          permissions      = "777"
+          root_directory   = "/"
+        }
+      }
+    ]
+
+    # Basic services don't need any special permissions. However, if you need
+    #  to access other AWS resources, you can define a policy here. The Image
+    #  Renderer service needs access to the assets bucket to write out rendered
+    #  images to the assets bucket.
+    # If you don't need any special permissions, you can omit this.
+    policy = {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "s3:GetObject",
+            "s3:PutObject"
+          ]
+          Resource = [
+            var.shared_resources.assets.bucket_arn,
+            "${var.shared_resources.assets.bucket_arn}/*"
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+### Environment-Specific Overrides
+
+Finally, in your environment configuration, you can override the defaults for your service. This is most useful for passing in environment variables for your service.
+
+```terraform
+# in iac/envs/{environment}/main.tf
+service_configurations = {
+  "your-service-name" = {
+    # Override container settings
+    container = {
+      cpu    = 1024  # override the service level default cpu
+      memory = 2048  # override the service level default memory
+      # append any additional environment variables here
+      environment = [
+        {
+          name  = "YOUR_SERVICE_NAME_AUTH_KEY"
+          value = var.your_service_name_auth_key
+        }
+      ]
+    }
+  }
+}
+```
+
+### Configuration Hierarchy
+
+Configurations are applied in the following order (later ones override earlier ones):
+
+1. **Global Defaults** (`_defaults/`)
+2. **Service Defaults** (your service's `main.tf`)
+3. **Environment Overrides** (`envs/{environment}/main.tf`)
+
+## Next Steps
+
+Once your service is deployed, you can interact with it using the `./bin/ecs` script.
+
+See [ecs-commands.mdx](./ecs-commands.mdx) for more details.

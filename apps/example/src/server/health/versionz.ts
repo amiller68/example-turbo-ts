@@ -15,7 +15,6 @@ export const handler = async (req: Request, res: Response) => {
       node_version: process.version,
       platform: process.platform,
       arch: process.arch,
-      // Version can be set via environment variable
       version: (pkg as PackageJson).version,
     });
   } catch (error) {

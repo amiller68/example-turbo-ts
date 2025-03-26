@@ -48,6 +48,7 @@ FROM base AS runner
 
 # install runtime dependencies
 RUN apk add --no-cache \
+    curl \
     libc6-compat
 
 WORKDIR /app

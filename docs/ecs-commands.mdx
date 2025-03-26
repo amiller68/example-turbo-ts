@@ -1,0 +1,36 @@
+---
+title: "ECS Commands"
+description: "How to use the ./bin/ecs script to work with ECS containers"
+---
+
+# ECS Commands
+
+The `./bin/ecs` script provides two commands for working with ECS containers:
+
+## SSH into Containers
+
+To SSH into a running container:
+
+```bash
+# SSH into a container in staging
+./bin/ecs ssh staging your-service-name
+
+# SSH into a specific task in production
+./bin/ecs ssh production your-service-name 123456789
+```
+
+If no task ID is provided, the script will automatically select a random running task.
+
+## Force New Deployments
+
+To force a new deployment of a service:
+
+```bash
+# Force new deployment in staging
+./bin/ecs deploy staging your-service-name
+
+# Force new deployment in production
+./bin/ecs deploy production your-service-name
+```
+
+This is useful when you need to restart a service or ensure it picks up new configuration changes.

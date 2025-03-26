@@ -1,0 +1,45 @@
+---
+title: "CI/CD Setup for Services"
+description: "Automated build and deployment workflow for services using GitHub Actions"
+---
+
+# CI/CD Setup for Services
+
+Our CI/CD pipeline automatically builds and deploys services using GitHub Actions on pushes to `main` and `dev` branches. The workflow is defined in `.github/workflows/services-deploy.yml`.
+
+## Enabling CI/CD for Your Service
+
+1. Add your service to the list of dockerized services in the workflow:
+
+Just follow the `TODO (service-cicd)` markers in the file.
+
+```yaml
+# In .github/actions/detect-service-changes/action.yml
+DOCKERIZED_SERVICES=("example" "your-service-name") # Add your service here
+```
+
+## Test Build Workflow Overview
+
+The test build workflow is defined in `.github/workflows/services-build.yml`. It is triggered for PRs into `main` and `dev` branches.
+
+The workflow will build docker images for all services that have changed within the PR.
+
+## Deployment Workflow Overview
+
+The pipeline consists of three main jobs:
+
+1. **Change Detection**: Determines which services need to be built
+2. **Build And Push**: Builds Docker images for the affected services and pushes them to ECR
+3. **Deploy**: Triggers a re-deploy of the service in ECS
+
+The workflow triggers on:
+
+1. **Push** to `main` or `dev` branches
+
+   - Builds and deploys affected services
+   - Changes must be in `apps/`, `packages/`, or the workflow file
+
+## Related Documentation
+
+- [Docker Build and Push](./docker-build-push.mdx)
+- [Deploying Services](./deploying-services.mdx)

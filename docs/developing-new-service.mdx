@@ -1,0 +1,75 @@
+---
+title: "Developing a New Service"
+description: "How to create and set up a new service using our Express.js template"
+---
+
+# Developing a New Service
+
+The `apps/example` directory serves as an opinionated template for creating new Express.js services in our monorepo. It provides a standardized foundation with built-in patterns for common service requirements.
+
+## Step 1: Copy the Template
+
+1. Copy the entire `apps/example` directory to create your new service:
+
+```bash
+cp -r apps/example apps/your-service-name
+```
+
+2. **Important**: The directory name must match the service name in `package.json`. For example, if your service is called `image-renderer`, it should be under `apps/image-renderer` with matching `name` field in `package.json`.
+
+See [Naming Conventions](./naming-conventions.mdx) for more details.
+
+## Step 2: Implement Service Setup Tasks
+
+NOTE: You may just follow the `TODO (service-setup)` markers throughout the template in order to carry out the following changes.
+
+You'll need to implement a couple of changes to make sure the service works in
+development and is ready to be deployed to AWS.
+
+- Update `package.json` to:
+  - Replace `example` with your service name in the `name` field.
+- Update `Dockerfile` to:
+  - Replace `example` with your service name in the `SERVICE_NAME` argument at
+    the top of the `Dockerfile`.
+- Update `README.md` to:
+  - Keep this up to date with your service's details so that others can understand it:
+    - what it does
+    - how its configured
+    - what apis it exposes
+
+There are a few other `TODO (service-setup)` comments in the template that you
+may also want to implement. If not mentioned above, they are optional and context specific. You may want to take a look at:
+
+- `src/index.ts`: there's specific parts in the startup logic where you may
+  need to add one-time setup logic.
+- `src/server/health/readyz.ts`: this endpoint is used by the AWS ALB to determine if the service is ready to receive traffic. For now it's a simple health check that always returns a 200. You SHOULD update this to check the actual health of your service if you add external services as dependencies (such as a database or S3 bucket).
+
+## Step 3: Local Development
+
+At this point you should be able to run your service locally within the monorepo.
+
+1. Install dependencies (from the root of the repo):
+
+```bash
+npm install
+```
+
+2. Start the development server:
+
+```bash
+npm run dev
+```
+
+3. Run basic tests:
+
+```bash
+npm test
+```
+
+## Next Steps
+
+Once you've set up your service:
+
+- [Build and push Docker images](./docker-build-push.mdx)
+- [Deploy your service](./deploying-services.mdx)
+- Review [naming conventions](./naming-conventions.mdx)

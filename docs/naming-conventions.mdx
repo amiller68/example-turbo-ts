@@ -1,0 +1,90 @@
+---
+title: "Service Naming Conventions"
+description: "Important naming rules to follow across service components"
+---
+
+# Service Naming Conventions
+
+Consistent naming is critical for our service infrastructure to work correctly. This guide outlines the required naming conventions across all service components.
+
+## Required Name Consistency
+
+Your service name must be identical (using kebab-case) across all these locations:
+
+1. **Application Code**
+
+   - Directory name: `apps/your-service-name/`
+   - Package name in `package.json`: `"name": "your-service-name"`
+
+2. **Docker/ECR**
+
+   - ECR repository name in `iac/envs/aws-ecr/main.tf`
+
+3. **Infrastructure**
+   - Service module directory: `iac/modules/aws/services/your-service-name/`
+   - Service module name in `iac/modules/aws/services/main.tf::locals.service_modules`: `"your-service-name": module.your-service-name`
+   - Service name in `iac/envs/{env}/main.tf::service_configurations`: `"your-service-name": { ... }`
+
+If you do so, you'll be able to take full advantage of our automated tooling for building, deploying, and managing services destined for AWS.
+
+## Examples
+
+Here's how a service named `data-processor` should be referenced:
+
+```
+# Directory Structure
+apps/data-processor/
+iac/modules/aws/services/data-processor/
+
+# package.json
+{
+  "name": "data-processor"
+}
+
+# iac/envs/aws-ecr/main.tf
+locals {
+  services = ["data-processor"]
+}
+
+# iac/modules/aws/services/main.tf
+module "data_processor" {  # Note: this one doesn't matter
+  source = "./data-processor"  # And neither does this
+}
+
+locals {
+  service_modules = {
+    # NOTE: but this one does!
+    "data-processor" = module.data_processor.service
+  }
+}
+
+# Environment Configuration
+service_configurations = {
+  "data-processor" = {
+    # configuration here
+    # ...
+  }
+}
+```
+
+## Common Mistakes to Avoid
+
+1. **Inconsistent Casing**
+
+   - ❌ `DataProcessor`
+   - ❌ `data_processor`
+   - ✅ `data-processor`
+
+2. **Different Names in Different Places**
+
+   - ❌ `data-processor` in ECR but `processor` in Terraform
+   - ✅ `data-processor` consistently everywhere
+
+3. **Using Different Separators**
+   - ❌ Using both hyphens and underscores
+   - ✅ Always use hyphens except in Terraform variable names
+
+## Related Documentation
+
+- [Developing a New Service](./developing-new-service.mdx)
+- [Deploying Services](./deploying-services.mdx)

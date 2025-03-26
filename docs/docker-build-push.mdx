@@ -1,0 +1,68 @@
+---
+title: "Docker Build and Push"
+description: "Building and pushing service images using our Docker tooling"
+---
+
+# Docker Build and Push
+
+We use a standardized Docker build process for all services, managed through our `bin/docker.sh` script.
+
+If you've followed the [developing-new-service.mdx](./developing-new-service.mdx) guide, you should have a service that can be built and pushed to ECR.
+
+Once both our ECR + service infrastructure is setup, you won't need to manually push images. Our CI/CD pipeline will handle this for you. This guide is still useful for building images locally during development.
+
+## Building Images
+
+Again, you won't need to manually build images. Our CI/CD pipeline will handle this for you. This guide is still useful for building images locally during development.
+
+```bash
+# Development build (uses host platform)
+./bin/docker.sh build your-service-name
+
+# Staging / Production build (required for AWS Fargate)
+./bin/docker.sh build your-service-name -p linux/amd64
+```
+
+## Pushing Images
+
+NOTE: Each service requires a new ECR repository in order to store its images.
+If you haven't already, you'll need to create a new ECR repository for your service. See [deploying-services.mdx](./deploying-services.mdx) for more details.
+
+While CI/CD typically handles image pushing, you can manually push images during development:
+
+```bash
+# Push with AWS credentials in environment
+./bin/docker.sh push your-service-name
+
+# Push using Infisical for credentials
+./bin/docker.sh push your-service-name -I
+
+# (Most likely) push to staging, with `staging-latest`, no branch protection,
+#  and allowing pushes against dirty branches
+./bin/docker.sh push your-service-name -I -D -L -S
+```
+
+### Image Tagging Process
+
+When pushing images, the script:
+
+1. Tags images based on Git branch:
+   - `main` → `latest`
+   - `dev` → `staging-latest`
+   - Other branches → `staging-{type}-{hash}` (e.g., `staging-feat-abc123`)
+2. Pushes to your service's ECR repository
+3. Manages environment-specific tags
+
+### Authentication Options
+
+For pushing images, you'll need AWS credentials. These can be provided:
+
+- As environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`)
+- Via Infisical with the `-I` flag (recommended for development)
+
+## Next Steps
+
+Once your images are built and pushed:
+
+- [Deploy your service](./deploying-services.mdx)
+- Review [naming conventions](./naming-conventions.mdx)

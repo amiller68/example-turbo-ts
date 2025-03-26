@@ -1,6 +1,11 @@
 name: 🔨 Services Build
 
 on:
+  workflow_run:
+    workflows: ["🏗️ Terraform Apply"]
+    types:
+      - completed
+    branches: [main, dev]
   pull_request:
     paths:
       - "apps/**"

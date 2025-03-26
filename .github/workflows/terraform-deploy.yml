@@ -49,11 +49,10 @@ jobs:
         id: env
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "env_path=production" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            echo "env_path=staging" >> $GITHUB_OUTPUT
+            echo "env_path=./iac/envs/production" >> $GITHUB_OUTPUT
           else
-            echo "env_path=staging" >> $GITHUB_OUTPUT
+            echo "UNSUPPORTED ENV"
+            exit 1
           fi
 
       - name: Terraform Init

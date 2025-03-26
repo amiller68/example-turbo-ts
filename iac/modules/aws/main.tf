@@ -1,14 +1,14 @@
 # AWS Infrastructure Module
 
 locals {
-  # NOTE: this must be setup in the route53 zone before running this
-  #  This uses an example hosted zone i set up on my own account for this
-  #  project
-  hosted_zone_dns_name = "example-turbo.krondor.org"
+  # TODO (infra-setup): this must be setup in the route53 zone before running this playbook
+  #  I set this up in my AWS account under a domain i control 
+  hosted_zone_dns_name = "aws.krondor.org"
 
   # Map service policies to the format expected by the security module
   service_policies = flatten([
-    for name, service in module.services.services : {
+    for name, service in module.services.services :
+    service.policy != null ? [{
       service_name = name
       role_id      = split("/", module.services_ecs.service_task_roles[name])[1]
       policy = {
@@ -19,7 +19,7 @@ locals {
           Statement = service.policy.Statement
         }
       }
-    }
+    }] : []
   ])
 }
 
@@ -56,20 +56,8 @@ module "loadbalancer" {
 module "services" {
   source = "./services"
 
-  aws_region  = var.aws_region
   environment = var.environment
-  shared_resources = {
-    networking = {
-      vpc_id          = module.networking.vpc_id
-      private_subnets = module.networking.private_subnet_ids
-    }
-    assets = {
-      bucket     = data.aws_s3_bucket.assets.id
-      bucket_arn = data.aws_s3_bucket.assets.arn
-    }
-  }
   service_configurations = var.service_configurations
-  tags                   = var.tags
 }
 
 # Backend API services ECS cluster
